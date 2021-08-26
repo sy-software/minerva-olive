@@ -16,12 +16,13 @@ const (
 var (
 	ErrSecretNoExists   = errors.New("secret does not exists")
 	ErrDuplicatedConfig = errors.New("config set already exists")
+	ErrConfigNotExists  = errors.New("config does not exists")
 )
 
 type Repo interface {
 	CreateSet(name string, ttl int) (domain.ConfigSet, error)
 	GetSet(name string, maxAge int) (*domain.ConfigSet, error)
-	GetSetNames(count int, skip int) ([]string, error)
+	GetSetNames(limit int, skip int) ([]string, error)
 	DeleteSet(name string) (domain.ConfigSet, error)
 	AddItem(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
 	UpdateItem(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
