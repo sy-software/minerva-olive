@@ -20,6 +20,12 @@ type MemRepo struct {
 	RemoveItemInterceptor  func(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
 }
 
+func NewMockRepo() *MemRepo {
+	return &MemRepo{
+		Sets: make(map[string]*domain.ConfigSet),
+	}
+}
+
 func (repo *MemRepo) CreateSet(name string, ttl int) (domain.ConfigSet, error) {
 	if repo.CreateSetInterceptor != nil {
 		return repo.CreateSetInterceptor(name, ttl)
@@ -110,6 +116,7 @@ func (repo *MemRepo) AddItem(item domain.ConfigItem, setName string) (domain.Con
 		return domain.ConfigSet{}, err
 	}
 
+	set.UpdateDate = datetime.UnixUTCNow()
 	return *set, nil
 }
 
@@ -129,6 +136,7 @@ func (repo *MemRepo) UpdateItem(item domain.ConfigItem, setName string) (domain.
 		return domain.ConfigSet{}, err
 	}
 
+	set.UpdateDate = datetime.UnixUTCNow()
 	return *set, nil
 }
 
@@ -148,5 +156,6 @@ func (repo *MemRepo) RemoveItem(item domain.ConfigItem, setName string) (domain.
 		return domain.ConfigSet{}, err
 	}
 
+	set.UpdateDate = datetime.UnixUTCNow()
 	return *set, nil
 }
