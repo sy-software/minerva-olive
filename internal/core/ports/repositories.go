@@ -20,7 +20,7 @@ var (
 )
 
 type Repo interface {
-	CreateSet(name string, ttl int) (domain.ConfigSet, error)
+	CreateSet(set domain.ConfigSet, ttl int) (domain.ConfigSet, error)
 	GetSet(name string, maxAge int) (*domain.ConfigSet, error)
 	GetSetNames(limit int, skip int) ([]string, error)
 	DeleteSet(name string) (domain.ConfigSet, error)

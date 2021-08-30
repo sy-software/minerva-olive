@@ -11,7 +11,7 @@ import (
 type MemRepo struct {
 	Sets map[string]*domain.ConfigSet
 
-	CreateSetInterceptor   func(name string, ttl int) (domain.ConfigSet, error)
+	CreateSetInterceptor   func(set domain.ConfigSet, ttl int) (domain.ConfigSet, error)
 	GetSetInterceptor      func(name string, maxAge int) (*domain.ConfigSet, error)
 	GetSetNamesInterceptor func(count int, skip int) ([]string, error)
 	DeleteSetInterceptor   func(name string) (domain.ConfigSet, error)
@@ -26,26 +26,19 @@ func NewMockRepo() *MemRepo {
 	}
 }
 
-func (repo *MemRepo) CreateSet(name string, ttl int) (domain.ConfigSet, error) {
+func (repo *MemRepo) CreateSet(set domain.ConfigSet, ttl int) (domain.ConfigSet, error) {
 	if repo.CreateSetInterceptor != nil {
-		return repo.CreateSetInterceptor(name, ttl)
+		return repo.CreateSetInterceptor(set, ttl)
 	}
 
-	_, exists := repo.Sets[name]
+	_, exists := repo.Sets[set.Name]
 
 	if exists {
 		return domain.ConfigSet{}, ports.ErrDuplicatedConfig
 	}
 
-	newSet := domain.ConfigSet{
-		Name:       name,
-		Items:      domain.ConfigItemMap{},
-		CreateDate: datetime.UnixUTCNow(),
-		UpdateDate: datetime.UnixUTCNow(),
-	}
-
-	repo.Sets[name] = &newSet
-	return newSet, nil
+	repo.Sets[set.Name] = &set
+	return set, nil
 }
 
 func (repo *MemRepo) GetSet(name string, maxAge int) (*domain.ConfigSet, error) {
