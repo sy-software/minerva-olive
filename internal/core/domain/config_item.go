@@ -12,11 +12,13 @@ type ConfigType string
 const (
 	Secret ConfigType = "secret"
 	Plain  ConfigType = "plain"
+	Nested ConfigType = "nested"
 )
 
 var (
-	ErrDuplicatedKey = errors.New("duplicated config item key")
-	ErrKeyNotExists  = errors.New("config item key does not exists")
+	ErrDuplicatedKey         = errors.New("duplicated config item key")
+	ErrKeyNotExists          = errors.New("config item key does not exists")
+	ErrInvalidNestedKeyValue = errors.New("invalid key value")
 )
 
 type ConfigItem struct {

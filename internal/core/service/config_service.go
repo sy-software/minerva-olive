@@ -1,6 +1,8 @@
 package service
 
 import (
+	"encoding/json"
+
 	"github.com/sy-software/minerva-go-utils/datetime"
 	"github.com/sy-software/minerva-olive/internal/core/domain"
 	"github.com/sy-software/minerva-olive/internal/core/ports"
@@ -101,5 +103,32 @@ func (service *ConfigService) RemoveItem(item domain.ConfigItem, setName string)
 }
 
 func (service *ConfigService) SetToJson(set domain.ConfigSet) ([]byte, error) {
-	panic("not implemented")
+	mappedItems, err := service.setToMap(set)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return json.Marshal(mappedItems)
+}
+
+func (service *ConfigService) setToMap(set domain.ConfigSet) (map[string]interface{}, error) {
+	mappedItems := map[string]interface{}{}
+	for _, item := range set.Items {
+		if item.Type == domain.Nested {
+			name, ok := item.Value.(string)
+			if !ok {
+				return mappedItems, domain.ErrInvalidNestedKeyValue
+			}
+			set, err := service.GetSet(name)
+			if err != nil {
+				return mappedItems, err
+			}
+
+			mappedItems[item.Key], err = service.setToMap(set)
+		} else {
+			mappedItems[item.Key] = item.Value
+		}
+	}
+
+	return mappedItems, nil
 }

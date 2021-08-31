@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -519,6 +520,132 @@ func TestRemoveItemFromSet(t *testing.T) {
 
 		if gotItem.Value != 100 {
 			t.Errorf("Expected item value: %+v, got: %+v", 100, gotItem.Value)
+		}
+	})
+}
+
+/// Test JSON serialization
+
+func TestConvertSetToJSON(t *testing.T) {
+	t.Run("Test single level config set is converted", func(t *testing.T) {
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+
+		name := "mySet"
+		service.CreateSet(name)
+
+		items := []domain.ConfigItem{
+			{
+				Key:   "integer",
+				Value: 100,
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "string",
+				Value: "Hello world!",
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "bool",
+				Value: true,
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "float",
+				Value: 42.5,
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "array",
+				Value: []int{1, 2, 4},
+				Type:  domain.Plain,
+			},
+		}
+
+		jsonMap := map[string]interface{}{}
+		for _, item := range items {
+			service.AddItem(item, name)
+			jsonMap[item.Key] = item.Value
+		}
+
+		jsonBytes, _ := json.Marshal(jsonMap)
+
+		set, _ := service.GetSet(name)
+		got, err := service.SetToJson(set)
+		if err != nil {
+			t.Errorf("Expected set to be serialized without errors, got: %v", err)
+		}
+
+		if !cmp.Equal(jsonBytes, got) {
+			t.Errorf("Expected json: %s, got: %v", string(jsonBytes), string(got))
+		}
+	})
+
+	t.Run("Test multi level config set is converted", func(t *testing.T) {
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+
+		name := "mySet"
+		nested := "nested"
+		service.CreateSet(name)
+		service.CreateSet(nested)
+
+		items := []domain.ConfigItem{
+			{
+				Key:   "integer",
+				Value: 100,
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "string",
+				Value: "Hello world!",
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "bool",
+				Value: true,
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "float",
+				Value: 42.5,
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "array",
+				Value: []int{1, 2, 4},
+				Type:  domain.Plain,
+			},
+		}
+
+		nestedMap := map[string]interface{}{}
+		for _, item := range items {
+			service.AddItem(item, nested)
+			nestedMap[item.Key] = item.Value
+		}
+
+		jsonMap := map[string]interface{}{}
+		service.AddItem(domain.ConfigItem{
+			Key:   nested,
+			Value: nested,
+			Type:  domain.Nested,
+		}, name)
+		jsonMap[nested] = nestedMap
+
+		jsonBytes, _ := json.Marshal(jsonMap)
+
+		set, _ := service.GetSet(name)
+		got, err := service.SetToJson(set)
+		if err != nil {
+			t.Errorf("Expected set to be serialized without errors, got: %v", err)
+		}
+
+		if !cmp.Equal(jsonBytes, got) {
+			t.Errorf("Expected json: %s, got: %v", string(jsonBytes), string(got))
 		}
 	})
 }
