@@ -18,7 +18,8 @@ const (
 var (
 	ErrDuplicatedKey         = errors.New("duplicated config item key")
 	ErrKeyNotExists          = errors.New("config item key does not exists")
-	ErrInvalidNestedKeyValue = errors.New("invalid key value")
+	ErrInvalidNestedKeyValue = errors.New("invalid key value for nested config")
+	ErrSecretKeyValue        = errors.New("invalid key value for secret")
 )
 
 type ConfigItem struct {

@@ -114,7 +114,9 @@ func (service *ConfigService) SetToJson(set domain.ConfigSet) ([]byte, error) {
 func (service *ConfigService) setToMap(set domain.ConfigSet) (map[string]interface{}, error) {
 	mappedItems := map[string]interface{}{}
 	for _, item := range set.Items {
-		if item.Type == domain.Nested {
+
+		switch item.Type {
+		case domain.Nested:
 			name, ok := item.Value.(string)
 			if !ok {
 				return mappedItems, domain.ErrInvalidNestedKeyValue
@@ -125,7 +127,19 @@ func (service *ConfigService) setToMap(set domain.ConfigSet) (map[string]interfa
 			}
 
 			mappedItems[item.Key], err = service.setToMap(set)
-		} else {
+		case domain.Secret:
+			name, ok := item.Value.(string)
+			if !ok {
+				return mappedItems, domain.ErrSecretKeyValue
+			}
+			val, err := service.secretManager.Get(name)
+
+			if err != nil {
+				return mappedItems, err
+			}
+
+			mappedItems[item.Key] = val
+		default:
 			mappedItems[item.Key] = item.Value
 		}
 	}

@@ -648,4 +648,64 @@ func TestConvertSetToJSON(t *testing.T) {
 			t.Errorf("Expected json: %s, got: %v", string(jsonBytes), string(got))
 		}
 	})
+
+	t.Run("Test secret are expanded using secret manager", func(t *testing.T) {
+		values := map[string]string{
+			"integer": "100",
+			"string":  "Hello world!",
+			"bool":    "true",
+			"float":   "42.5",
+		}
+
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{
+			Values: values,
+		}
+		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+
+		name := "mySet"
+		service.CreateSet(name)
+
+		items := []domain.ConfigItem{
+			{
+				Key:   "integer",
+				Value: "integer",
+				Type:  domain.Secret,
+			},
+			{
+				Key:   "string",
+				Value: "string",
+				Type:  domain.Secret,
+			},
+			{
+				Key:   "bool",
+				Value: "bool",
+				Type:  domain.Secret,
+			},
+			{
+				Key:   "float",
+				Value: "float",
+				Type:  domain.Secret,
+			},
+		}
+
+		jsonMap := map[string]interface{}{}
+		for _, item := range items {
+			service.AddItem(item, name)
+			jsonMap[item.Key] = values[item.Key]
+		}
+
+		jsonBytes, _ := json.Marshal(jsonMap)
+
+		set, _ := service.GetSet(name)
+		got, err := service.SetToJson(set)
+		if err != nil {
+			t.Errorf("Expected set to be serialized without errors, got: %v", err)
+		}
+
+		if !cmp.Equal(jsonBytes, got) {
+			t.Errorf("Expected json: %s, got: %v", string(jsonBytes), string(got))
+		}
+	})
 }
