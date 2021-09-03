@@ -10,11 +10,11 @@ import (
 
 type ConfigService struct {
 	repo          ports.Repo
-	cache         ports.Repo
+	cache         ports.CacheRepo
 	secretManager ports.Secret
 }
 
-func NewConfigService(repo ports.Repo, cache ports.Repo, secretManager ports.Secret) *ConfigService {
+func NewConfigService(repo ports.Repo, cache ports.CacheRepo, secretManager ports.Secret) *ConfigService {
 	return &ConfigService{
 		repo:          repo,
 		cache:         cache,
@@ -31,11 +31,11 @@ func (service *ConfigService) CreateSet(name string) (domain.ConfigSet, error) {
 		UpdateDate: now,
 	}
 
-	return service.repo.CreateSet(newSet, ports.InfiniteTTL)
+	return service.repo.CreateSet(newSet)
 }
 
 func (service *ConfigService) GetSet(name string) (domain.ConfigSet, error) {
-	set, err := service.repo.GetSet(name, ports.AnyAge)
+	set, err := service.repo.GetSet(name)
 	if err == nil {
 		return *set, err
 	}
@@ -43,17 +43,26 @@ func (service *ConfigService) GetSet(name string) (domain.ConfigSet, error) {
 	return domain.ConfigSet{}, err
 }
 
+func (service *ConfigService) GetSetJson(name string) ([]byte, error) {
+	set, err := service.GetSet(name)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return service.SetToJson(set)
+}
+
 func (service *ConfigService) GetSetNames(count int, skip int) ([]string, error) {
 	return service.repo.GetSetNames(count, skip)
 }
 
 func (service *ConfigService) RenameSet(name string, newName string) (domain.ConfigSet, error) {
-	set, err := service.repo.GetSet(name, ports.AnyAge)
+	set, err := service.repo.GetSet(name)
 	if err != nil {
 		return domain.ConfigSet{}, err
 	}
 
-	_, err = service.repo.GetSet(newName, ports.AnyAge)
+	_, err = service.repo.GetSet(newName)
 	if err != ports.ErrConfigNotExists {
 		return domain.ConfigSet{}, ports.ErrDuplicatedConfig
 	}
@@ -65,7 +74,7 @@ func (service *ConfigService) RenameSet(name string, newName string) (domain.Con
 
 	set.Name = newName
 	set.UpdateDate = datetime.UnixUTCNow()
-	return service.repo.CreateSet(*set, ports.InfiniteTTL)
+	return service.repo.CreateSet(*set)
 }
 
 func (service *ConfigService) DeleteSet(name string) (domain.ConfigSet, error) {

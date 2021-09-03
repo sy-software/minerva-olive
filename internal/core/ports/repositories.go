@@ -17,16 +17,22 @@ var (
 	ErrSecretNoExists   = errors.New("secret does not exists")
 	ErrDuplicatedConfig = errors.New("config set already exists")
 	ErrConfigNotExists  = errors.New("config does not exists")
+	ErrOldValue         = errors.New("cached value is older than expected")
 )
 
 type Repo interface {
-	CreateSet(set domain.ConfigSet, ttl int) (domain.ConfigSet, error)
-	GetSet(name string, maxAge int) (*domain.ConfigSet, error)
+	CreateSet(set domain.ConfigSet) (domain.ConfigSet, error)
+	GetSet(name string) (*domain.ConfigSet, error)
 	GetSetNames(limit int, skip int) ([]string, error)
 	DeleteSet(name string) (domain.ConfigSet, error)
 	AddItem(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
 	UpdateItem(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
 	RemoveItem(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
+}
+
+type CacheRepo interface {
+	SaveJSON(json []byte, key string, ttl int) error
+	GetJSON(key string, maxAge int) ([]byte, error)
 }
 
 type Secret interface {

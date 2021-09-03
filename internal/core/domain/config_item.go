@@ -39,10 +39,10 @@ func NewConfigItem(key string, value interface{}, cfgType ConfigType) *ConfigIte
 type ConfigItemMap map[string]ConfigItem
 
 type ConfigSet struct {
-	Name       string
-	CreateDate time.Time
-	UpdateDate time.Time
-	Items      ConfigItemMap
+	Name       string        `json:"name"`
+	CreateDate time.Time     `json:"createDate"`
+	UpdateDate time.Time     `json:"updateDate"`
+	Items      ConfigItemMap `json:"items"`
 }
 
 func NewConfigSet(name string, items ...ConfigItem) *ConfigSet {

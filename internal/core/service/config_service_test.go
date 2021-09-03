@@ -133,6 +133,61 @@ func TestReadSet(t *testing.T) {
 			t.Errorf("Expected names length of: 0, got: %d", len(names))
 		}
 	})
+
+	t.Run("Test a set can be read as json", func(t *testing.T) {
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+
+		name := "mySet"
+		service.CreateSet(name)
+
+		items := []domain.ConfigItem{
+			{
+				Key:   "integer",
+				Value: 100,
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "string",
+				Value: "Hello world!",
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "bool",
+				Value: true,
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "float",
+				Value: 42.5,
+				Type:  domain.Plain,
+			},
+			{
+				Key:   "array",
+				Value: []int{1, 2, 4},
+				Type:  domain.Plain,
+			},
+		}
+
+		jsonMap := map[string]interface{}{}
+		for _, item := range items {
+			service.AddItem(item, name)
+			jsonMap[item.Key] = item.Value
+		}
+
+		jsonBytes, _ := json.Marshal(jsonMap)
+
+		got, err := service.GetSetJson(name)
+		if err != nil {
+			t.Errorf("Expected set to be read without errors, got: %v", err)
+		}
+
+		if !cmp.Equal(got, jsonBytes) {
+			t.Errorf("Expected json: %s, got %q", string(jsonBytes), got)
+		}
+	})
 }
 
 func TestDeleteSet(t *testing.T) {

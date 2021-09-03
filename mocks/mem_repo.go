@@ -2,22 +2,33 @@ package mocks
 
 import (
 	"sort"
+	"time"
 
 	"github.com/sy-software/minerva-go-utils/datetime"
 	"github.com/sy-software/minerva-olive/internal/core/domain"
 	"github.com/sy-software/minerva-olive/internal/core/ports"
 )
 
-type MemRepo struct {
-	Sets map[string]*domain.ConfigSet
+type CacheItem struct {
+	val      []byte
+	creation time.Time
+	ttl      time.Duration
+}
 
-	CreateSetInterceptor   func(set domain.ConfigSet, ttl int) (domain.ConfigSet, error)
-	GetSetInterceptor      func(name string, maxAge int) (*domain.ConfigSet, error)
+type MemRepo struct {
+	Sets  map[string]*domain.ConfigSet
+	Cache map[string]CacheItem
+
+	CreateSetInterceptor   func(set domain.ConfigSet) (domain.ConfigSet, error)
+	GetSetInterceptor      func(name string) (*domain.ConfigSet, error)
 	GetSetNamesInterceptor func(count int, skip int) ([]string, error)
 	DeleteSetInterceptor   func(name string) (domain.ConfigSet, error)
 	AddItemInterceptor     func(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
 	UpdateItemInterceptor  func(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
 	RemoveItemInterceptor  func(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
+
+	SaveJSONInterceptor func(json []byte, key string, ttl int) error
+	GetJSONInterceptor  func(key string, maxAge int) ([]byte, error)
 }
 
 func NewMockRepo() *MemRepo {
@@ -26,9 +37,9 @@ func NewMockRepo() *MemRepo {
 	}
 }
 
-func (repo *MemRepo) CreateSet(set domain.ConfigSet, ttl int) (domain.ConfigSet, error) {
+func (repo *MemRepo) CreateSet(set domain.ConfigSet) (domain.ConfigSet, error) {
 	if repo.CreateSetInterceptor != nil {
-		return repo.CreateSetInterceptor(set, ttl)
+		return repo.CreateSetInterceptor(set)
 	}
 
 	_, exists := repo.Sets[set.Name]
@@ -41,9 +52,9 @@ func (repo *MemRepo) CreateSet(set domain.ConfigSet, ttl int) (domain.ConfigSet,
 	return set, nil
 }
 
-func (repo *MemRepo) GetSet(name string, maxAge int) (*domain.ConfigSet, error) {
+func (repo *MemRepo) GetSet(name string) (*domain.ConfigSet, error) {
 	if repo.GetSetInterceptor != nil {
-		return repo.GetSetInterceptor(name, maxAge)
+		return repo.GetSetInterceptor(name)
 	}
 
 	value, exists := repo.Sets[name]
@@ -98,7 +109,7 @@ func (repo *MemRepo) AddItem(item domain.ConfigItem, setName string) (domain.Con
 		return repo.AddItemInterceptor(item, setName)
 	}
 
-	set, err := repo.GetSet(setName, ports.AnyAge)
+	set, err := repo.GetSet(setName)
 
 	if err != nil {
 		return domain.ConfigSet{}, err
@@ -118,7 +129,7 @@ func (repo *MemRepo) UpdateItem(item domain.ConfigItem, setName string) (domain.
 		return repo.UpdateItemInterceptor(item, setName)
 	}
 
-	set, err := repo.GetSet(setName, ports.AnyAge)
+	set, err := repo.GetSet(setName)
 
 	if err != nil {
 		return domain.ConfigSet{}, err
@@ -138,7 +149,7 @@ func (repo *MemRepo) RemoveItem(item domain.ConfigItem, setName string) (domain.
 		return repo.RemoveItemInterceptor(item, setName)
 	}
 
-	set, err := repo.GetSet(setName, ports.AnyAge)
+	set, err := repo.GetSet(setName)
 
 	if err != nil {
 		return domain.ConfigSet{}, err
@@ -151,4 +162,41 @@ func (repo *MemRepo) RemoveItem(item domain.ConfigItem, setName string) (domain.
 
 	set.UpdateDate = datetime.UnixUTCNow()
 	return *set, nil
+}
+
+// Cache
+
+func (repo *MemRepo) SaveJSON(json []byte, key string, ttl int) error {
+	if repo.SaveJSONInterceptor != nil {
+		return repo.SaveJSONInterceptor(json, key, ttl)
+	}
+
+	repo.Cache[key] = CacheItem{
+		val:      json,
+		creation: datetime.UnixUTCNow(),
+		ttl:      time.Duration(ttl),
+	}
+
+	return nil
+}
+
+func (repo *MemRepo) GetJSON(key string, maxAge int) ([]byte, error) {
+	if repo.GetJSONInterceptor != nil {
+		return repo.GetJSONInterceptor(key, maxAge)
+	}
+
+	value, exists := repo.Cache[key]
+
+	if !exists {
+		return nil, ports.ErrConfigNotExists
+	}
+
+	if maxAge != ports.AnyAge {
+		now := datetime.UnixUTCNow()
+		if value.creation.Add(time.Duration(maxAge)).Before(now) {
+			return nil, ports.ErrOldValue
+		}
+	}
+
+	return value.val, nil
 }
