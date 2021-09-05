@@ -27,13 +27,15 @@ type MemRepo struct {
 	UpdateItemInterceptor  func(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
 	RemoveItemInterceptor  func(item domain.ConfigItem, setName string) (domain.ConfigSet, error)
 
-	SaveJSONInterceptor func(json []byte, key string, ttl int) error
-	GetJSONInterceptor  func(key string, maxAge int) ([]byte, error)
+	SaveJSONInterceptor   func(json []byte, key string, ttl int) error
+	GetJSONInterceptor    func(key string, maxAge int) ([]byte, error)
+	RemoveJSONInterceptor func(key string) error
 }
 
 func NewMockRepo() *MemRepo {
 	return &MemRepo{
-		Sets: make(map[string]*domain.ConfigSet),
+		Sets:  make(map[string]*domain.ConfigSet),
+		Cache: make(map[string]CacheItem),
 	}
 }
 
@@ -191,7 +193,7 @@ func (repo *MemRepo) GetJSON(key string, maxAge int) ([]byte, error) {
 		return nil, ports.ErrConfigNotExists
 	}
 
-	if maxAge != ports.AnyAge {
+	if maxAge != domain.AnyAge {
 		now := datetime.UnixUTCNow()
 		if value.creation.Add(time.Duration(maxAge)).Before(now) {
 			return nil, ports.ErrOldValue
@@ -199,4 +201,14 @@ func (repo *MemRepo) GetJSON(key string, maxAge int) ([]byte, error) {
 	}
 
 	return value.val, nil
+}
+
+func (repo *MemRepo) RemoveJSON(key string) error {
+	if repo.RemoveJSONInterceptor != nil {
+		return repo.RemoveJSONInterceptor(key)
+	}
+
+	delete(repo.Cache, key)
+
+	return nil
 }

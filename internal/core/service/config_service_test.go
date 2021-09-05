@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,11 +15,12 @@ import (
 )
 
 func TestCreateSet(t *testing.T) {
+	config := domain.DefaultConfig()
 	t.Run("Test a new config set can be created", func(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		now := datetime.UnixUTCNow()
@@ -46,7 +48,7 @@ func TestCreateSet(t *testing.T) {
 
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -59,11 +61,12 @@ func TestCreateSet(t *testing.T) {
 }
 
 func TestReadSet(t *testing.T) {
+	config := domain.DefaultConfig()
 	t.Run("Test a set can be read", func(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -82,7 +85,7 @@ func TestReadSet(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -98,7 +101,7 @@ func TestReadSet(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		for i := 0; i < 20; i++ {
 			service.CreateSet(fmt.Sprintf("mySet%d", i))
@@ -138,7 +141,7 @@ func TestReadSet(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -179,7 +182,7 @@ func TestReadSet(t *testing.T) {
 
 		jsonBytes, _ := json.Marshal(jsonMap)
 
-		got, err := service.GetSetJson(name)
+		got, err := service.GetSetJson(name, domain.AnyAge)
 		if err != nil {
 			t.Errorf("Expected set to be read without errors, got: %v", err)
 		}
@@ -191,11 +194,12 @@ func TestReadSet(t *testing.T) {
 }
 
 func TestDeleteSet(t *testing.T) {
+	config := domain.DefaultConfig()
 	t.Run("Test a set can be delete", func(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -216,7 +220,7 @@ func TestDeleteSet(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -230,11 +234,12 @@ func TestDeleteSet(t *testing.T) {
 }
 
 func TestRenameSet(t *testing.T) {
+	config := domain.DefaultConfig()
 	t.Run("Test a set can be renamed", func(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -279,7 +284,7 @@ func TestRenameSet(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -298,7 +303,7 @@ func TestRenameSet(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -318,11 +323,12 @@ func TestRenameSet(t *testing.T) {
 /// Test items
 
 func TestAddItemToSet(t *testing.T) {
+	config := domain.DefaultConfig()
 	t.Run("Test a new key can be added", func(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -362,7 +368,7 @@ func TestAddItemToSet(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -403,11 +409,12 @@ func TestAddItemToSet(t *testing.T) {
 }
 
 func TestUpdateItemFromSet(t *testing.T) {
+	config := domain.DefaultConfig()
 	t.Run("Test a key can be updated", func(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -451,7 +458,7 @@ func TestUpdateItemFromSet(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -493,11 +500,12 @@ func TestUpdateItemFromSet(t *testing.T) {
 }
 
 func TestRemoveItemFromSet(t *testing.T) {
+	config := domain.DefaultConfig()
 	t.Run("Test a key can be removed", func(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -538,7 +546,7 @@ func TestRemoveItemFromSet(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -582,11 +590,12 @@ func TestRemoveItemFromSet(t *testing.T) {
 /// Test JSON serialization
 
 func TestConvertSetToJSON(t *testing.T) {
+	config := domain.DefaultConfig()
 	t.Run("Test single level config set is converted", func(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -642,7 +651,7 @@ func TestConvertSetToJSON(t *testing.T) {
 		mockRepo := mocks.NewMockRepo()
 		cacheRepo := mocks.NewMockRepo()
 		mockSecret := mocks.MockSecrets{}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		nested := "nested"
@@ -717,7 +726,7 @@ func TestConvertSetToJSON(t *testing.T) {
 		mockSecret := mocks.MockSecrets{
 			Values: values,
 		}
-		service := NewConfigService(mockRepo, cacheRepo, &mockSecret)
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		name := "mySet"
 		service.CreateSet(name)
@@ -761,6 +770,245 @@ func TestConvertSetToJSON(t *testing.T) {
 
 		if !cmp.Equal(jsonBytes, got) {
 			t.Errorf("Expected json: %s, got: %v", string(jsonBytes), string(got))
+		}
+	})
+}
+
+/// Test Caching of values
+
+func TestJSONIsSavedToCache(t *testing.T) {
+	t.Run("Test a new config is saved to cache after creation", func(t *testing.T) {
+		config := domain.DefaultConfig()
+		config.CacheTTL = time.Duration(10) * time.Second
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+
+		name := "mySet"
+
+		cacheSaveCalled := false
+		cacheRepo.SaveJSONInterceptor = func(json []byte, key string, ttl int) error {
+			cacheSaveCalled = true
+
+			if string(json) != "{}" {
+				t.Errorf("Expected json: %s, got: %s", "{}", string(json))
+			}
+
+			if ttl != int(config.CacheTTL) {
+				t.Errorf("Expected TTL: %d, got: %d", config.CacheTTL, ttl)
+			}
+
+			if !strings.Contains(key, name) {
+				t.Errorf("Expected cache key to contain: %q, got: %q", name, key)
+			}
+
+			return nil
+		}
+		mockSecret := mocks.MockSecrets{}
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		_, err := service.CreateSet(name)
+
+		if err != nil {
+			t.Errorf("Expected set to be created without errors, got: %v", err)
+		}
+
+		if !cacheSaveCalled {
+			t.Errorf("Expected cache SaveJSON to be called")
+		}
+	})
+
+	t.Run("Test renamed set is updated in cache", func(t *testing.T) {
+		config := domain.DefaultConfig()
+		config.CacheTTL = time.Duration(10) * time.Second
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+
+		name := "mySet"
+		newName := "newName"
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+		service.CreateSet(name)
+
+		cacheSaveCalled := false
+		cacheRepo.SaveJSONInterceptor = func(json []byte, key string, ttl int) error {
+			cacheSaveCalled = true
+
+			if string(json) != "{}" {
+				t.Errorf("Expected json: %s, got: %s", "{}", string(json))
+			}
+
+			if ttl != int(config.CacheTTL) {
+				t.Errorf("Expected TTL: %d, got: %d", config.CacheTTL, ttl)
+			}
+
+			if !strings.Contains(key, newName) {
+				t.Errorf("Expected cache key to contain: %q, got: %q", newName, key)
+			}
+
+			return nil
+		}
+		cacheRemoveCalled := false
+		cacheRepo.RemoveJSONInterceptor = func(key string) error {
+			if !strings.Contains(key, name) {
+				t.Errorf("Expected cache key to contain: %q, got: %q", name, key)
+			}
+			cacheRemoveCalled = true
+			return nil
+		}
+
+		_, err := service.RenameSet(name, newName)
+		if err != nil {
+			t.Errorf("Expected set to be renamed without errors, got: %v", err)
+		}
+
+		if !cacheSaveCalled {
+			t.Errorf("Expected cache SaveJSON to be called")
+		}
+
+		if !cacheRemoveCalled {
+			t.Errorf("Expected cache RemoveJSON to be called")
+		}
+	})
+
+	t.Run("Test adding item to set updates cache", func(t *testing.T) {
+		config := domain.DefaultConfig()
+		config.CacheTTL = time.Duration(10) * time.Second
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+
+		name := "mySet"
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+		service.CreateSet(name)
+
+		cacheSaveCalled := false
+		cacheRepo.SaveJSONInterceptor = func(json []byte, key string, ttl int) error {
+			cacheSaveCalled = true
+
+			if string(json) != `{"string":"hello"}` {
+				t.Errorf("Expected json: %s, got: %s", "{}", string(json))
+			}
+
+			if ttl != int(config.CacheTTL) {
+				t.Errorf("Expected TTL: %d, got: %d", config.CacheTTL, ttl)
+			}
+
+			if !strings.Contains(key, name) {
+				t.Errorf("Expected cache key to contain: %q, got: %q", name, key)
+			}
+
+			return nil
+		}
+
+		_, err := service.AddItem(domain.ConfigItem{
+			Key:   "string",
+			Value: "hello",
+			Type:  domain.Plain,
+		}, name)
+		if err != nil {
+			t.Errorf("Expected set to be updated without errors, got: %v", err)
+		}
+
+		if !cacheSaveCalled {
+			t.Errorf("Expected cache SaveJSON to be called")
+		}
+	})
+
+	t.Run("Test updating item in set updates cache", func(t *testing.T) {
+		config := domain.DefaultConfig()
+		config.CacheTTL = time.Duration(10) * time.Second
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+
+		name := "mySet"
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+		service.CreateSet(name)
+		service.AddItem(domain.ConfigItem{
+			Key:   "string",
+			Value: "hello",
+			Type:  domain.Plain,
+		}, name)
+
+		cacheSaveCalled := false
+		cacheRepo.SaveJSONInterceptor = func(json []byte, key string, ttl int) error {
+			cacheSaveCalled = true
+
+			if string(json) != `{"string":"goodbye"}` {
+				t.Errorf("Expected json: %s, got: %s", "{}", string(json))
+			}
+
+			if ttl != int(config.CacheTTL) {
+				t.Errorf("Expected TTL: %d, got: %d", config.CacheTTL, ttl)
+			}
+
+			if !strings.Contains(key, name) {
+				t.Errorf("Expected cache key to contain: %q, got: %q", name, key)
+			}
+
+			return nil
+		}
+
+		_, err := service.UpdateItem(domain.ConfigItem{
+			Key:   "string",
+			Value: "goodbye",
+			Type:  domain.Plain,
+		}, name)
+		if err != nil {
+			t.Errorf("Expected set to be updated without errors, got: %v", err)
+		}
+
+		if !cacheSaveCalled {
+			t.Errorf("Expected cache SaveJSON to be called")
+		}
+	})
+
+	t.Run("Test removing item from set updates cache", func(t *testing.T) {
+		config := domain.DefaultConfig()
+		config.CacheTTL = time.Duration(10) * time.Second
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+
+		name := "mySet"
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+		service.CreateSet(name)
+		service.AddItem(domain.ConfigItem{
+			Key:   "string",
+			Value: "hello",
+			Type:  domain.Plain,
+		}, name)
+
+		cacheSaveCalled := false
+		cacheRepo.SaveJSONInterceptor = func(json []byte, key string, ttl int) error {
+			cacheSaveCalled = true
+
+			if string(json) != "{}" {
+				t.Errorf("Expected json: %s, got: %s", "{}", string(json))
+			}
+
+			if ttl != int(config.CacheTTL) {
+				t.Errorf("Expected TTL: %d, got: %d", config.CacheTTL, ttl)
+			}
+
+			if !strings.Contains(key, name) {
+				t.Errorf("Expected cache key to contain: %q, got: %q", name, key)
+			}
+
+			return nil
+		}
+
+		_, err := service.RemoveItem(domain.ConfigItem{
+			Key:   "string",
+			Value: "hello",
+			Type:  domain.Plain,
+		}, name)
+		if err != nil {
+			t.Errorf("Expected set to be updated without errors, got: %v", err)
+		}
+
+		if !cacheSaveCalled {
+			t.Errorf("Expected cache SaveJSON to be called")
 		}
 	})
 }

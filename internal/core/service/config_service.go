@@ -12,13 +12,15 @@ type ConfigService struct {
 	repo          ports.Repo
 	cache         ports.CacheRepo
 	secretManager ports.Secret
+	config        *domain.Config
 }
 
-func NewConfigService(repo ports.Repo, cache ports.CacheRepo, secretManager ports.Secret) *ConfigService {
+func NewConfigService(config *domain.Config, repo ports.Repo, cache ports.CacheRepo, secretManager ports.Secret) *ConfigService {
 	return &ConfigService{
 		repo:          repo,
 		cache:         cache,
 		secretManager: secretManager,
+		config:        config,
 	}
 }
 
@@ -30,7 +32,7 @@ func (service *ConfigService) CreateSet(name string) (domain.ConfigSet, error) {
 		CreateDate: now,
 		UpdateDate: now,
 	}
-
+	service.updateCache(newSet)
 	return service.repo.CreateSet(newSet)
 }
 
@@ -43,7 +45,7 @@ func (service *ConfigService) GetSet(name string) (domain.ConfigSet, error) {
 	return domain.ConfigSet{}, err
 }
 
-func (service *ConfigService) GetSetJson(name string) ([]byte, error) {
+func (service *ConfigService) GetSetJson(name string, maxAge int) ([]byte, error) {
 	set, err := service.GetSet(name)
 	if err != nil {
 		return []byte{}, err
@@ -72,8 +74,13 @@ func (service *ConfigService) RenameSet(name string, newName string) (domain.Con
 		return domain.ConfigSet{}, err
 	}
 
+	service.cache.RemoveJSON(name)
+
 	set.Name = newName
 	set.UpdateDate = datetime.UnixUTCNow()
+
+	service.updateCache(*set)
+
 	return service.repo.CreateSet(*set)
 }
 
@@ -88,6 +95,7 @@ func (service *ConfigService) AddItem(item domain.ConfigItem, setName string) (d
 		return set, err
 	}
 
+	service.updateCache(set)
 	return set, err
 }
 
@@ -98,6 +106,7 @@ func (service *ConfigService) UpdateItem(item domain.ConfigItem, setName string)
 		return set, err
 	}
 
+	service.updateCache(set)
 	return set, err
 }
 
@@ -108,6 +117,7 @@ func (service *ConfigService) RemoveItem(item domain.ConfigItem, setName string)
 		return set, err
 	}
 
+	service.updateCache(set)
 	return set, err
 }
 
@@ -119,6 +129,8 @@ func (service *ConfigService) SetToJson(set domain.ConfigSet) ([]byte, error) {
 
 	return json.Marshal(mappedItems)
 }
+
+// Private utils
 
 func (service *ConfigService) setToMap(set domain.ConfigSet) (map[string]interface{}, error) {
 	mappedItems := map[string]interface{}{}
@@ -154,4 +166,10 @@ func (service *ConfigService) setToMap(set domain.ConfigSet) (map[string]interfa
 	}
 
 	return mappedItems, nil
+}
+
+func (service *ConfigService) updateCache(set domain.ConfigSet) {
+	// For now, ignore errors during cache saving
+	jsonBytes, _ := service.SetToJson(set)
+	service.cache.SaveJSON(jsonBytes, set.Name, int(service.config.CacheTTL))
 }

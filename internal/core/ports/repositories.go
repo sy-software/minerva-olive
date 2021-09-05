@@ -6,12 +6,6 @@ import (
 	"github.com/sy-software/minerva-olive/internal/core/domain"
 )
 
-// Utility const
-const (
-	InfiniteTTL = -1
-	AnyAge      = -1
-)
-
 // Errors
 var (
 	ErrSecretNoExists   = errors.New("secret does not exists")
@@ -33,6 +27,7 @@ type Repo interface {
 type CacheRepo interface {
 	SaveJSON(json []byte, key string, ttl int) error
 	GetJSON(key string, maxAge int) ([]byte, error)
+	RemoveJSON(key string) error
 }
 
 type Secret interface {
