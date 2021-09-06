@@ -46,6 +46,11 @@ func (service *ConfigService) GetSet(name string) (domain.ConfigSet, error) {
 }
 
 func (service *ConfigService) GetSetJson(name string, maxAge int) ([]byte, error) {
+	jsonBytes, err := service.cache.GetJSON(name, maxAge)
+	if err == nil {
+		return jsonBytes, nil
+	}
+
 	set, err := service.GetSet(name)
 	if err != nil {
 		return []byte{}, err

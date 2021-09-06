@@ -1012,3 +1012,126 @@ func TestJSONIsSavedToCache(t *testing.T) {
 		}
 	})
 }
+
+func TestJSONIsReadFromCache(t *testing.T) {
+	t.Run("Test JSON is returned from cache", func(t *testing.T) {
+		config := domain.DefaultConfig()
+		config.CacheTTL = time.Duration(10) * time.Second
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+
+		name := "mySet"
+		expectedMaxAge := domain.AnyAge
+		cacheGetCalled := false
+		cacheRepo.GetJSONInterceptor = func(key string, maxAge int) ([]byte, error) {
+			cacheGetCalled = true
+			if !strings.Contains(key, name) {
+				t.Errorf("Expected cache key to contain: %q, got: %q", name, key)
+			}
+
+			if maxAge != expectedMaxAge {
+				t.Errorf("Expected MaxAge: %d, got: %d", expectedMaxAge, maxAge)
+			}
+
+			return []byte("{}"), nil
+		}
+
+		mockSecret := mocks.MockSecrets{}
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+		service.CreateSet(name)
+
+		jsonBytes, err := service.GetSetJson(name, expectedMaxAge)
+		if err != nil {
+			t.Errorf("Expected set to be retrieved without errors, got: %v", err)
+		}
+
+		if !cacheGetCalled {
+			t.Errorf("Expected cache GetJSON to be called")
+		}
+
+		if string(jsonBytes) != "{}" {
+			t.Errorf("Expected json: %s, got: %s", "{}", string(jsonBytes))
+		}
+	})
+
+	t.Run("Test JSON is returned from persintent storage if cache is not present", func(t *testing.T) {
+		config := domain.DefaultConfig()
+		config.CacheTTL = time.Duration(10) * time.Second
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+
+		name := "mySet"
+		expectedMaxAge := domain.AnyAge
+		cacheGetCalled := false
+		cacheRepo.GetJSONInterceptor = func(key string, maxAge int) ([]byte, error) {
+			cacheGetCalled = true
+			if !strings.Contains(key, name) {
+				t.Errorf("Expected cache key to contain: %q, got: %q", name, key)
+			}
+
+			if maxAge != expectedMaxAge {
+				t.Errorf("Expected MaxAge: %d, got: %d", expectedMaxAge, maxAge)
+			}
+
+			return []byte("don't return this"), ports.ErrConfigNotExists
+		}
+
+		mockSecret := mocks.MockSecrets{}
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+		service.CreateSet(name)
+
+		jsonBytes, err := service.GetSetJson(name, expectedMaxAge)
+		if err != nil {
+			t.Errorf("Expected set to be retrieved without errors, got: %v", err)
+		}
+
+		if !cacheGetCalled {
+			t.Errorf("Expected cache GetJSON to be called")
+		}
+
+		if string(jsonBytes) != "{}" {
+			t.Errorf("Expected json: %s, got: %s", "{}", string(jsonBytes))
+		}
+	})
+
+	t.Run("Test JSON is returned from persintent storage if cache is older than max age", func(t *testing.T) {
+		config := domain.DefaultConfig()
+		config.CacheTTL = time.Duration(1) * time.Second
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+
+		name := "mySet"
+		expectedMaxAge := time.Duration(1) * time.Second
+		cacheGetCalled := false
+		cacheRepo.GetJSONInterceptor = func(key string, maxAge int) ([]byte, error) {
+			cacheGetCalled = true
+			if !strings.Contains(key, name) {
+				t.Errorf("Expected cache key to contain: %q, got: %q", name, key)
+			}
+
+			if time.Duration(maxAge) != expectedMaxAge {
+				t.Errorf("Expected MaxAge: %d, got: %d", expectedMaxAge, maxAge)
+			}
+
+			return []byte("don't return this"), ports.ErrOldValue
+		}
+
+		mockSecret := mocks.MockSecrets{}
+		service := NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+		service.CreateSet(name)
+
+		time.Sleep(2 * time.Second)
+		jsonBytes, err := service.GetSetJson(name, int(expectedMaxAge))
+		if err != nil {
+			t.Errorf("Expected set to be retrieved without errors, got: %v", err)
+		}
+
+		if !cacheGetCalled {
+			t.Errorf("Expected cache GetJSON to be called")
+		}
+
+		if string(jsonBytes) != "{}" {
+			t.Errorf("Expected json: %s, got: %s", "{}", string(jsonBytes))
+		}
+	})
+}
