@@ -54,7 +54,7 @@ func TestCreateSet(t *testing.T) {
 		service.CreateSet(name)
 		_, err := service.CreateSet(name)
 
-		if err == nil {
+		if err != ports.ErrDuplicatedConfig {
 			t.Errorf("Expected error: %v got nil", ports.ErrDuplicatedConfig)
 		}
 	})
