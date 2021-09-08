@@ -16,18 +16,14 @@ const (
 	AgeTracker   string = "json:age"
 	JSONPrefix   string = "json:"
 	CfgSetPrefix string = "set:"
+	CfgSetNames  string = "set:names"
 )
 
 type RedisRepo struct {
 	db *RedisDB
 }
 
-func NewRedisRepo(config *domain.Config) (*RedisRepo, error) {
-	db, err := GetRedisDB(config)
-	if err != nil {
-		return nil, err
-	}
-
+func NewRedisRepo(config *domain.Config, db *RedisDB) (*RedisRepo, error) {
 	return &RedisRepo{
 		db: db,
 	}, nil
@@ -92,7 +88,7 @@ func (repo *RedisRepo) GetJSON(key string, maxAge int) ([]byte, error) {
 	return []byte(valCmd.Val()), nil
 }
 
-func (repo *RedisRepo) CreateSet(set domain.ConfigSet, ttl int) (domain.ConfigSet, error) {
+func (repo *RedisRepo) CreateSet(set domain.ConfigSet) (domain.ConfigSet, error) {
 	ctx := context.Background()
 	key := CfgSetPrefix + set.Name
 	exists := repo.db.Client.Exists(ctx, key)
@@ -104,18 +100,30 @@ func (repo *RedisRepo) CreateSet(set domain.ConfigSet, ttl int) (domain.ConfigSe
 	if err != nil {
 		return set, err
 	}
-	cmd := repo.db.Client.Set(ctx, key, jsonBytes, 0)
-	if cmd.Err() != nil {
-		if cmd.Err() == redis.Nil {
-			return set, ports.ErrConfigNotExists
-		}
-		return set, cmd.Err()
-	}
 
-	return set, nil
+	cmds, err := repo.db.Client.TxPipelined(ctx, func(p redis.Pipeliner) error {
+		cmdSet := repo.db.Client.Set(ctx, key, jsonBytes, 0)
+
+		if cmdSet.Err() != nil {
+			return cmdSet.Err()
+		}
+		cmdName := p.ZAdd(ctx, CfgSetNames, &redis.Z{
+			Score:  float64(time.Now().UTC().UnixNano()),
+			Member: key,
+		})
+
+		if cmdName.Err() != nil {
+			return cmdName.Err()
+		}
+
+		return nil
+	})
+
+	log.Info().Msgf("CACHE: Create Set commands: %+v", cmds)
+	return set, err
 }
 
-func (repo *RedisRepo) GetSet(name string, maxAge int) (*domain.ConfigSet, error) {
+func (repo *RedisRepo) GetSet(name string) (*domain.ConfigSet, error) {
 	ctx := context.Background()
 	cmd := repo.db.Client.Get(ctx, CfgSetPrefix+name)
 	if cmd.Err() != nil {
@@ -131,7 +139,19 @@ func (repo *RedisRepo) GetSet(name string, maxAge int) (*domain.ConfigSet, error
 }
 
 func (repo *RedisRepo) GetSetNames(limit int, skip int) ([]string, error) {
-	panic("not implemented")
+	ctx := context.Background()
+	start := skip
+	end := skip + limit - 1
+	cmd := repo.db.Client.ZRange(ctx, CfgSetNames, int64(start), int64(end))
+
+	if cmd.Err() != nil {
+		if cmd.Err() == redis.Nil {
+			return []string{}, nil
+		}
+
+		return nil, cmd.Err()
+	}
+	return cmd.Val(), nil
 }
 
 func (repo *RedisRepo) DeleteSet(name string) (domain.ConfigSet, error) {
