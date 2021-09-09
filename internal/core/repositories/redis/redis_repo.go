@@ -155,7 +155,41 @@ func (repo *RedisRepo) GetSetNames(limit int, skip int) ([]string, error) {
 }
 
 func (repo *RedisRepo) DeleteSet(name string) (domain.ConfigSet, error) {
-	panic("not implemented")
+	ctx := context.Background()
+	key := CfgSetPrefix + name
+	exists := repo.db.Client.Exists(ctx, key)
+	if exists.Val() == 0 {
+		return domain.ConfigSet{}, ports.ErrConfigNotExists
+	}
+
+	cmd := repo.db.Client.Get(ctx, CfgSetPrefix+name)
+	if cmd.Err() != nil {
+		if cmd.Err() == redis.Nil {
+			return domain.ConfigSet{}, ports.ErrConfigNotExists
+		}
+		return domain.ConfigSet{}, cmd.Err()
+	}
+
+	var set domain.ConfigSet
+	json.Unmarshal([]byte(cmd.Val()), &set)
+
+	cmds, err := repo.db.Client.TxPipelined(ctx, func(p redis.Pipeliner) error {
+		cmdDel := repo.db.Client.Del(ctx, key)
+
+		if cmdDel.Err() != nil {
+			return cmdDel.Err()
+		}
+		cmdName := p.ZRem(ctx, CfgSetNames, key)
+
+		if cmdName.Err() != nil {
+			return cmdName.Err()
+		}
+
+		return nil
+	})
+
+	log.Info().Msgf("CACHE: Delete Set commands: %+v", cmds)
+	return set, err
 }
 
 func (repo *RedisRepo) AddItem(item domain.ConfigItem, setName string) (domain.ConfigSet, error) {
@@ -180,18 +214,82 @@ func (repo *RedisRepo) AddItem(item domain.ConfigItem, setName string) (domain.C
 	}
 
 	set.UpdateDate = datetime.UnixUTCNow()
-	setCmd := repo.db.Client.Set(ctx, CfgSetPrefix+setName, set, redis.KeepTTL)
+	jsonBytes, err := json.Marshal(set)
+	if err != nil {
+		return domain.ConfigSet{}, err
+	}
+	setCmd := repo.db.Client.Set(ctx, CfgSetPrefix+setName, jsonBytes, redis.KeepTTL)
 	if setCmd.Err() != nil {
-		return set, cmd.Err()
+		return set, setCmd.Err()
 	}
 
 	return set, nil
 }
 
 func (repo *RedisRepo) UpdateItem(item domain.ConfigItem, setName string) (domain.ConfigSet, error) {
-	panic("not implemented")
+	ctx := context.Background()
+	cmd := repo.db.Client.Get(ctx, CfgSetPrefix+setName)
+	if cmd.Err() != nil {
+		if cmd.Err() == redis.Nil {
+			return domain.ConfigSet{}, ports.ErrConfigNotExists
+		}
+		return domain.ConfigSet{}, cmd.Err()
+	}
+
+	var set domain.ConfigSet
+	err := json.Unmarshal([]byte(cmd.Val()), &set)
+	if err != nil {
+		return domain.ConfigSet{}, err
+	}
+
+	_, err = set.Update(item)
+	if err != nil {
+		return domain.ConfigSet{}, err
+	}
+
+	set.UpdateDate = datetime.UnixUTCNow()
+	jsonBytes, err := json.Marshal(set)
+	if err != nil {
+		return domain.ConfigSet{}, err
+	}
+	setCmd := repo.db.Client.Set(ctx, CfgSetPrefix+setName, jsonBytes, redis.KeepTTL)
+	if setCmd.Err() != nil {
+		return set, setCmd.Err()
+	}
+
+	return set, nil
 }
 
 func (repo *RedisRepo) RemoveItem(item domain.ConfigItem, setName string) (domain.ConfigSet, error) {
-	panic("not implemented")
+	ctx := context.Background()
+	cmd := repo.db.Client.Get(ctx, CfgSetPrefix+setName)
+	if cmd.Err() != nil {
+		if cmd.Err() == redis.Nil {
+			return domain.ConfigSet{}, ports.ErrConfigNotExists
+		}
+		return domain.ConfigSet{}, cmd.Err()
+	}
+
+	var set domain.ConfigSet
+	err := json.Unmarshal([]byte(cmd.Val()), &set)
+	if err != nil {
+		return domain.ConfigSet{}, err
+	}
+
+	_, err = set.Delete(item.Key)
+	if err != nil {
+		return domain.ConfigSet{}, err
+	}
+
+	set.UpdateDate = datetime.UnixUTCNow()
+	jsonBytes, err := json.Marshal(set)
+	if err != nil {
+		return domain.ConfigSet{}, err
+	}
+	setCmd := repo.db.Client.Set(ctx, CfgSetPrefix+setName, jsonBytes, redis.KeepTTL)
+	if setCmd.Err() != nil {
+		return set, setCmd.Err()
+	}
+
+	return set, nil
 }
