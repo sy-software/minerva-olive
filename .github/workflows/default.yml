@@ -10,7 +10,7 @@ jobs:
       matrix:
         go-version: [1.16.x]
         redis-version: [6]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Start Redis v${{ matrix.redis-version }}
