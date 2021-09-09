@@ -13,10 +13,10 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Start Redis v${{ matrix.redis-version }}
-      uses: superchargejs/redis-github-action@1.1.0
+    - name: Setup redis
+      uses: shogo82148/actions-setup-redis@v1
       with:
-        redis-version: ${{ matrix.redis-version }}
+        redis-version: ${{ matrix.redis }}
     - name: Install Go
       uses: actions/setup-go@v2
       with:
