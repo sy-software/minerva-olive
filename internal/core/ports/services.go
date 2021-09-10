@@ -4,8 +4,8 @@ import "github.com/sy-software/minerva-olive/internal/core/domain"
 
 type ConfigService interface {
 	CreateSet(name string) (domain.ConfigSet, error)
-	GetSet(name string, maxAge int) (domain.ConfigSet, error)
-	GetSetJson(name string) ([]byte, error)
+	GetSet(name string) (domain.ConfigSet, error)
+	GetSetJson(name string, maxAge int) ([]byte, error)
 	GetSetNames(count int, skip int) ([]string, error)
 	RenameSet(name string, newName string) (domain.ConfigSet, error)
 	DeleteSet(name string) (domain.ConfigSet, error)
