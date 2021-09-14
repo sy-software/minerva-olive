@@ -22,6 +22,7 @@ const (
 	NotFound      ErrorCode = 64001
 	Internal      ErrorCode = 64002
 	InvalidParams ErrorCode = 64003
+	BadRequest    ErrorCode = 64003
 )
 
 var ErrInternalError = RestError{
@@ -51,5 +52,13 @@ func ErrNotFound(resource string) *RestError {
 		Code:       NotFound,
 		Message:    fmt.Sprintf("resource not found: %q", resource),
 		HTTPStatus: http.StatusNotFound,
+	}
+}
+
+func ErrBadRequest(message string, code ErrorCode) *RestError {
+	return &RestError{
+		Code:       code,
+		Message:    message,
+		HTTPStatus: http.StatusBadRequest,
 	}
 }

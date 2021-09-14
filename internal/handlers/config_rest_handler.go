@@ -50,6 +50,24 @@ func (handler *ConfigRESTHandler) CreateRoutes(router *gin.Engine) {
 			json.Unmarshal(data, &out)
 			c.JSON(http.StatusOK, gin.H{"data": out})
 		})
+
+		group.GET("/configset/:name", func(c *gin.Context) {
+			data, err := handler.GetConfigSet(c)
+			if err != nil {
+				handleError(err, c)
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"data": data})
+		})
+
+		group.POST("/configset/:name", func(c *gin.Context) {
+			data, err := handler.CreaConfigSet(c)
+			if err != nil {
+				handleError(err, c)
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"data": data})
+		})
 	}
 }
 
@@ -79,6 +97,46 @@ func (handler *ConfigRESTHandler) GetConfigJSON(c *gin.Context) ([]byte, error) 
 
 		log.Error().Stack().Err(err).Msg("GetConfigJSON error")
 		return nil, &domain.ErrInternalError
+	}
+
+	return output, nil
+}
+
+func (handler *ConfigRESTHandler) CreaConfigSet(c *gin.Context) (domain.ConfigSet, error) {
+	name, ok := c.Params.Get("name")
+
+	if !ok {
+		return domain.ConfigSet{}, domain.ErrMissingParam("name")
+	}
+
+	output, err := handler.service.CreateSet(name)
+	if err != nil {
+		if err == ports.ErrDuplicatedConfig {
+			return domain.ConfigSet{}, domain.ErrBadRequest(err.Error(), domain.BadRequest)
+		}
+
+		log.Error().Stack().Err(err).Msg("GetConfigSet error")
+		return domain.ConfigSet{}, &domain.ErrInternalError
+	}
+
+	return output, nil
+}
+
+func (handler *ConfigRESTHandler) GetConfigSet(c *gin.Context) (domain.ConfigSet, error) {
+	name, ok := c.Params.Get("name")
+
+	if !ok {
+		return domain.ConfigSet{}, domain.ErrMissingParam("name")
+	}
+
+	output, err := handler.service.GetSet(name)
+	if err != nil {
+		if err == ports.ErrConfigNotExists {
+			return domain.ConfigSet{}, domain.ErrNotFound(name)
+		}
+
+		log.Error().Stack().Err(err).Msg("GetConfigSet error")
+		return domain.ConfigSet{}, &domain.ErrInternalError
 	}
 
 	return output, nil
