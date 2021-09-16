@@ -1,7 +1,16 @@
 package domain
 
 import (
+	"encoding/json"
+	"os"
 	"time"
+
+	"github.com/rs/zerolog/log"
+)
+
+const (
+	DEFAULT_CONFIG_FILE = "./config.json"
+	CONFIG_FILE_VAR     = "CONFIG_FILE"
 )
 
 type RedisCfg struct {
@@ -33,6 +42,10 @@ type Config struct {
 	Redis RedisCfg `json:"redisConfig"`
 	// TTL for stored cache, default infinite
 	CacheTTL time.Duration
+	// Server bind IP default 0.0.0.0
+	Host string `json:"host,omitempty"`
+	// Server bind port default 8080
+	Port int `json:"port,omitempty"`
 }
 
 // DefaultConfig returns a configuration object with the default values
@@ -49,5 +62,38 @@ func DefaultConfig() Config {
 			PoolSize:          10,
 		},
 		CacheTTL: time.Duration(InfiniteTTL),
+		Host:     "127.0.0.1",
+		Port:     8080,
 	}
+}
+
+// LoadConfiguration Loads the configuration object from a json file
+func LoadConfigurationFile(file string) Config {
+	config := DefaultConfig()
+	configFile, err := os.Open(file)
+
+	if err != nil {
+		log.Warn().Err(err).Msg("Can't load config file. Default values will be used instead")
+	}
+
+	defer configFile.Close()
+
+	jsonParser := json.NewDecoder(configFile)
+	jsonParser.Decode(&config)
+	return config
+}
+
+func LoadConfig() Config {
+	log.Info().Msg("Loading configuration")
+	config := DefaultConfig()
+
+	configFile := os.Getenv(CONFIG_FILE_VAR)
+	if configFile == "" {
+		configFile = DEFAULT_CONFIG_FILE
+	}
+
+	log.Info().Msgf("Looking for configuration from: %s", configFile)
+	config = LoadConfigurationFile(configFile)
+	log.Info().Msg("Configuration loaded")
+	return config
 }
