@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/go-cmp/cmp"
 	"github.com/sy-software/minerva-olive/internal/core/domain"
 	"github.com/sy-software/minerva-olive/internal/core/ports"
 	"github.com/sy-software/minerva-olive/internal/core/service"
@@ -228,3 +229,339 @@ func TestCreateConfig(t *testing.T) {
 	})
 
 }
+
+func TestRenameConfig(t *testing.T) {
+	t.Run("Test rename a config", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		service.CreateSet(name)
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		newName := "newName"
+		body := fmt.Sprintf(`{ "name": %q }`, newName)
+		got := performRequest(router, "POST", "/api/configset/"+name, &body)
+
+		if got.Code != http.StatusOK {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusOK, got.Code)
+		}
+
+		var gotParsed struct {
+			data domain.ConfigSet
+		}
+		err := json.Unmarshal(got.Body.Bytes(), &gotParsed)
+		if err != nil {
+			t.Errorf("Expected valid json got error: %v", err)
+		}
+
+		if gotParsed.data.Name == newName {
+			t.Errorf("Expected config with name: %v got: %v", name, gotParsed.data.Name)
+		}
+	})
+
+	t.Run("Test rename a non existing config", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		newName := "newName"
+		body := fmt.Sprintf(`{ "name": %q }`, newName)
+		got := performRequest(router, "POST", "/api/configset/"+name, &body)
+
+		if got.Code != http.StatusNotFound {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusNotFound, got.Code)
+		}
+
+		expected := fmt.Sprint(domain.NotFound)
+		if !strings.Contains(got.Body.String(), expected) {
+			t.Errorf("Expected response to contain: %s got: %v", expected, got.Body.String())
+		}
+	})
+}
+
+func TestDeleteConfig(t *testing.T) {
+	t.Run("Test delete a config", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		service.CreateSet(name)
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		got := performRequest(router, "DELETE", "/api/configset/"+name, nil)
+
+		if got.Code != http.StatusOK {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusOK, got.Code)
+		}
+
+		got = performRequest(router, "GET", "/api/configset/"+name, nil)
+		if got.Code != http.StatusNotFound {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusNotFound, got.Code)
+		}
+	})
+
+	t.Run("Test rename a non existing config", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		got := performRequest(router, "DELETE", "/api/configset/"+name, nil)
+		if got.Code != http.StatusNotFound {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusNotFound, got.Code)
+		}
+	})
+}
+
+func TestAddConfigItem(t *testing.T) {
+	t.Run("Test add a config item", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		service.CreateSet(name)
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
+		bodyBytes, _ := json.Marshal(key)
+		body := string(bodyBytes)
+		got := performRequest(router, "POST", "/api/configset/"+name+"/item", &body)
+
+		if got.Code != http.StatusOK {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusOK, got.Code)
+		}
+
+		var gotParsed struct {
+			Data domain.ConfigSet
+		}
+		b := got.Body.Bytes()
+		err := json.Unmarshal(b, &gotParsed)
+		if err != nil {
+			t.Errorf("Expected valid json got error: %v", err)
+		}
+
+		gotItem, err := gotParsed.Data.Get(key.Key)
+		if err != nil {
+			t.Errorf("Expected key item got error: %v", err)
+		}
+		if !cmp.Equal(*key, gotItem) {
+			t.Errorf("Expected key item: %+v, got: %+v, diff: %v", key, gotItem, cmp.Diff(*key, gotItem))
+		}
+	})
+
+	t.Run("Test add duplicated item", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		service.CreateSet(name)
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		key := domain.NewConfigItem("myKey", 100, domain.Plain)
+		bodyBytes, _ := json.Marshal(key)
+		body := string(bodyBytes)
+		performRequest(router, "POST", "/api/configset/"+name+"/item", &body)
+		got := performRequest(router, "POST", "/api/configset/"+name+"/item", &body)
+
+		if got.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusBadRequest, got.Code)
+		}
+
+		expected := fmt.Sprint(domain.ErrDuplicatedKey)
+		if !strings.Contains(got.Body.String(), expected) {
+			t.Errorf("Expected response to contain: %s got: %v", expected, got.Body.String())
+		}
+	})
+}
+
+// update item
+
+func TestUpdateConfigItem(t *testing.T) {
+	t.Run("Test update a config item", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		service.CreateSet(name)
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
+		bodyBytes, _ := json.Marshal(key)
+		body := string(bodyBytes)
+		performRequest(router, "POST", "/api/configset/"+name+"/item", &body)
+
+		key.Value = float64(101)
+		bodyBytes, _ = json.Marshal(key)
+		body = string(bodyBytes)
+		got := performRequest(router, "PATCH", "/api/configset/"+name+"/item", &body)
+
+		if got.Code != http.StatusOK {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusOK, got.Code)
+		}
+
+		var gotParsed struct {
+			Data domain.ConfigSet
+		}
+		b := got.Body.Bytes()
+		err := json.Unmarshal(b, &gotParsed)
+		if err != nil {
+			t.Errorf("Expected valid json got error: %v", err)
+		}
+
+		gotItem, err := gotParsed.Data.Get(key.Key)
+		if err != nil {
+			t.Errorf("Expected key item got error: %v", err)
+		}
+		if !cmp.Equal(*key, gotItem) {
+			t.Errorf("Expected key item: %+v, got: %+v, diff: %v", key, gotItem, cmp.Diff(*key, gotItem))
+		}
+	})
+
+	t.Run("Test update a non existing config item", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		service.CreateSet(name)
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
+		bodyBytes, _ := json.Marshal(key)
+		body := string(bodyBytes)
+		performRequest(router, "POST", "/api/configset/"+name+"/item", &body)
+
+		key.Key = "notexists"
+		key.Value = float64(101)
+		bodyBytes, _ = json.Marshal(key)
+		body = string(bodyBytes)
+		got := performRequest(router, "PATCH", "/api/configset/"+name+"/item", &body)
+
+		if got.Code != http.StatusNotFound {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusNotFound, got.Code)
+		}
+
+		var gotParsed struct {
+			Data domain.ConfigSet
+		}
+		b := got.Body.Bytes()
+		err := json.Unmarshal(b, &gotParsed)
+		if err != nil {
+			t.Errorf("Expected valid json got error: %v", err)
+		}
+
+		_, err = gotParsed.Data.Get(key.Key)
+		if err != domain.ErrKeyNotExists {
+			t.Errorf("Expected error: %v got error: %v", domain.ErrKeyNotExists, err)
+		}
+	})
+}
+
+func TestDeleteConfigItem(t *testing.T) {
+	t.Run("Test delete a config item", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		service.CreateSet(name)
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
+		bodyBytes, _ := json.Marshal(key)
+		body := string(bodyBytes)
+		performRequest(router, "POST", "/api/configset/"+name+"/item", &body)
+		got := performRequest(router, "DELETE", "/api/configset/"+name+"/item/"+key.Key, nil)
+
+		if got.Code != http.StatusOK {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusOK, got.Code)
+		}
+
+		var gotParsed struct {
+			Data domain.ConfigSet
+		}
+		b := got.Body.Bytes()
+		err := json.Unmarshal(b, &gotParsed)
+		if err != nil {
+			t.Errorf("Expected valid json got error: %v", err)
+		}
+
+		_, err = gotParsed.Data.Get(key.Key)
+		if err != domain.ErrKeyNotExists {
+			t.Errorf("Expected error: %v got error: %v", domain.ErrKeyNotExists, err)
+		}
+	})
+
+	t.Run("Test delete a non existing config item", func(t *testing.T) {
+		router := gin.New()
+		name := "myConfig"
+		config := domain.DefaultConfig()
+		mockRepo := mocks.NewMockRepo()
+		cacheRepo := mocks.NewMockRepo()
+		mockSecret := mocks.MockSecrets{}
+		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+		service.CreateSet(name)
+		handler := NewConfigRESTHandler(&config, service)
+		handler.CreateRoutes(router)
+
+		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
+		bodyBytes, _ := json.Marshal(key)
+		body := string(bodyBytes)
+		performRequest(router, "POST", "/api/configset/"+name+"/item", &body)
+		got := performRequest(router, "DELETE", "/api/configset/"+name+"/item/notExists", nil)
+
+		if got.Code != http.StatusNotFound {
+			t.Errorf("Expected status code: %d, got: %d", http.StatusNotFound, got.Code)
+		}
+	})
+}
+
+// remove item

@@ -23,10 +23,10 @@ type RedisRepo struct {
 	db *RedisDB
 }
 
-func NewRedisRepo(config *domain.Config, db *RedisDB) (*RedisRepo, error) {
+func NewRedisRepo(config *domain.Config, db *RedisDB) *RedisRepo {
 	return &RedisRepo{
 		db: db,
-	}, nil
+	}
 }
 
 func (repo *RedisRepo) SaveJSON(json []byte, key string, ttl int) error {
@@ -86,6 +86,27 @@ func (repo *RedisRepo) GetJSON(key string, maxAge int) ([]byte, error) {
 	}
 
 	return []byte(valCmd.Val()), nil
+}
+
+func (repo *RedisRepo) RemoveJSON(key string) error {
+	ctx := context.Background()
+	cmds, err := repo.db.Client.TxPipelined(ctx, func(p redis.Pipeliner) error {
+		zrem := p.ZRem(ctx, AgeTracker, key)
+		if zrem.Err() != nil {
+			return zrem.Err()
+		}
+
+		statusDel := p.Del(ctx, JSONPrefix+key)
+
+		if statusDel.Err() != nil {
+			return statusDel.Err()
+		}
+
+		return nil
+	})
+
+	log.Info().Msgf("CACHE: Remove JSON commands: %+v", cmds)
+	return err
 }
 
 func (repo *RedisRepo) CreateSet(set domain.ConfigSet) (domain.ConfigSet, error) {

@@ -18,9 +18,9 @@ const DB = 5
 func TestSaveGetJSON(t *testing.T) {
 	config := domain.DefaultConfig()
 	config.Redis.DB = DB
-	db, _ := GetRedisDB(&config)
+	db, err := GetRedisDB(&config)
 	defer db.Client.FlushDB(context.Background())
-	repo, err := NewRedisRepo(&config, db)
+	repo := NewRedisRepo(&config, db)
 
 	if err != nil {
 		t.Errorf("Expected init without errors: %v", err)
@@ -44,12 +44,43 @@ func TestSaveGetJSON(t *testing.T) {
 	}
 }
 
+func TestRemoveJSON(t *testing.T) {
+	config := domain.DefaultConfig()
+	config.Redis.DB = DB
+	db, err := GetRedisDB(&config)
+	defer db.Client.FlushDB(context.Background())
+	repo := NewRedisRepo(&config, db)
+
+	if err != nil {
+		t.Errorf("Expected init without errors: %v", err)
+	}
+
+	name := "TestSaveJSON"
+
+	expected := []byte("{}")
+	err = repo.SaveJSON(expected, name, domain.InfiniteTTL)
+
+	if err != nil {
+		t.Errorf("Expected save without errors: %v", err)
+	}
+
+	err = repo.RemoveJSON(name)
+	if err != nil {
+		t.Errorf("Expected remove without errors: %v", err)
+	}
+
+	_, err = repo.GetJSON(name, domain.AnyAge)
+	if err != ports.ErrConfigNotExists {
+		t.Errorf("Expected error: %v, got: %v", ports.ErrConfigNotExists, err)
+	}
+}
+
 func TestNotFoundError(t *testing.T) {
 	config := domain.DefaultConfig()
 	config.Redis.DB = DB
-	db, _ := GetRedisDB(&config)
+	db, err := GetRedisDB(&config)
 	defer db.Client.FlushDB(context.Background())
-	repo, err := NewRedisRepo(&config, db)
+	repo := NewRedisRepo(&config, db)
 
 	if err != nil {
 		t.Errorf("Expected init without errors: %v", err)
@@ -77,10 +108,7 @@ func TestCreateSet(t *testing.T) {
 	db, _ := GetRedisDB(&config)
 	defer db.Client.FlushDB(context.Background())
 	t.Run("Test a new config set can be created", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
+		repo := NewRedisRepo(&config, db)
 
 		name := "TestCreateSetOK"
 		got, err := repo.CreateSet(*domain.NewConfigSet(name))
@@ -95,14 +123,11 @@ func TestCreateSet(t *testing.T) {
 	})
 
 	t.Run("Test a duplicated config can't be created", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
+		repo := NewRedisRepo(&config, db)
 
 		name := "TestCreateSetNotOK"
 		repo.CreateSet(*domain.NewConfigSet(name))
-		_, err = repo.CreateSet(*domain.NewConfigSet(name))
+		_, err := repo.CreateSet(*domain.NewConfigSet(name))
 
 		if err != ports.ErrDuplicatedConfig {
 			t.Errorf("Expected error: %v got nil", ports.ErrDuplicatedConfig)
@@ -116,10 +141,7 @@ func TestReadSet(t *testing.T) {
 	db, _ := GetRedisDB(&config)
 	defer db.Client.FlushDB(context.Background())
 	t.Run("Test a set can be read", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
+		repo := NewRedisRepo(&config, db)
 
 		name := "TestReadSetOK"
 		repo.CreateSet(*domain.NewConfigSet(name))
@@ -135,26 +157,20 @@ func TestReadSet(t *testing.T) {
 	})
 
 	t.Run("Test a non existing set can't be read", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
+		repo := NewRedisRepo(&config, db)
 
 		name := "TestReadSetNotFound"
 		repo.CreateSet(*domain.NewConfigSet(name))
 
-		_, err = repo.GetSet(name)
+		_, err := repo.GetSet(name)
 		if err != nil {
 			t.Errorf("Expected error: %v got nil", ports.ErrConfigNotExists)
 		}
 	})
 
 	t.Run("Test set names can be read and paginated", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
+		repo := NewRedisRepo(&config, db)
 		db.Client.FlushDB(context.Background())
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
 
 		for i := 0; i < 20; i++ {
 			repo.CreateSet(*domain.NewConfigSet(fmt.Sprintf("TestReadSetPage%d", i)))
@@ -198,16 +214,13 @@ func TestDeleteSet(t *testing.T) {
 	defer db.Client.FlushDB(context.Background())
 
 	t.Run("Test a set can be delete", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
+		repo := NewRedisRepo(&config, db)
 		db.Client.FlushDB(context.Background())
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
 
 		name := "TestDeleteSetOK"
 		repo.CreateSet(*domain.NewConfigSet(name))
 
-		_, err = repo.DeleteSet(name)
+		_, err := repo.DeleteSet(name)
 		if err != nil {
 			t.Errorf("Expected set to be delete without errors, got: %v", err)
 		}
@@ -220,16 +233,13 @@ func TestDeleteSet(t *testing.T) {
 	})
 
 	t.Run("Test a non existing set can't be deleted", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
+		repo := NewRedisRepo(&config, db)
 		db.Client.FlushDB(context.Background())
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
 
 		name := "TestDeleteSetOther"
 		repo.CreateSet(*domain.NewConfigSet(name))
 
-		_, err = repo.DeleteSet("TestDeleteSetNotFound")
+		_, err := repo.DeleteSet("TestDeleteSetNotFound")
 
 		if err != ports.ErrConfigNotExists {
 			t.Errorf("Expected error: %v got nil", ports.ErrConfigNotExists)
@@ -246,11 +256,8 @@ func TestAddItemToSet(t *testing.T) {
 	defer db.Client.FlushDB(context.Background())
 
 	t.Run("Test a new key can be added", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
+		repo := NewRedisRepo(&config, db)
 		db.Client.FlushDB(context.Background())
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
 
 		name := "TestAddItemToSetOK"
 		repo.CreateSet(*domain.NewConfigSet(name))
@@ -263,7 +270,7 @@ func TestAddItemToSet(t *testing.T) {
 			Value: float64(100),
 			Type:  domain.Plain,
 		}
-		_, err = repo.AddItem(newItem, name)
+		_, err := repo.AddItem(newItem, name)
 		if err != nil {
 			t.Errorf("Expected item to be added without errors, got: %v", err)
 		}
@@ -292,11 +299,8 @@ func TestAddItemToSet(t *testing.T) {
 	})
 
 	t.Run("Test a duplicated key can't be added", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
+		repo := NewRedisRepo(&config, db)
 		db.Client.FlushDB(context.Background())
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
 
 		name := "TestAddItemToSetDuplicated"
 		repo.CreateSet(*domain.NewConfigSet(name))
@@ -312,7 +316,7 @@ func TestAddItemToSet(t *testing.T) {
 		time.Sleep(1 * time.Second)
 		now := datetime.UnixUTCNow()
 		newItem.Value = "101"
-		_, err = repo.AddItem(newItem, name)
+		_, err := repo.AddItem(newItem, name)
 		if err == nil {
 			t.Errorf("Expected error: %v, got nil", domain.ErrDuplicatedKey)
 		}
@@ -348,11 +352,8 @@ func TestUpdateItemFromSet(t *testing.T) {
 	defer db.Client.FlushDB(context.Background())
 
 	t.Run("Test a key can be updated", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
+		repo := NewRedisRepo(&config, db)
 		db.Client.FlushDB(context.Background())
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
 
 		name := "TestUpdateItemFromSetOK"
 		repo.CreateSet(*domain.NewConfigSet(name))
@@ -369,7 +370,7 @@ func TestUpdateItemFromSet(t *testing.T) {
 		time.Sleep(1 * time.Second)
 
 		newItem.Value = "1000"
-		_, err = repo.UpdateItem(newItem, name)
+		_, err := repo.UpdateItem(newItem, name)
 		if err != nil {
 			t.Errorf("Expected item to be updated without errors, got: %v", err)
 		}
@@ -398,11 +399,8 @@ func TestUpdateItemFromSet(t *testing.T) {
 	})
 
 	t.Run("Test a non existing key can't be updated", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
+		repo := NewRedisRepo(&config, db)
 		db.Client.FlushDB(context.Background())
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
 
 		name := "TestUpdateItemFromSetNotFound"
 		repo.CreateSet(*domain.NewConfigSet(name))
@@ -419,7 +417,7 @@ func TestUpdateItemFromSet(t *testing.T) {
 		now := datetime.UnixUTCNow()
 		newItem.Key = "TestUpdateItemFromSetNotFoundKeyOther"
 		newItem.Value = "101"
-		_, err = repo.UpdateItem(newItem, name)
+		_, err := repo.UpdateItem(newItem, name)
 		if err == nil {
 			t.Errorf("Expected error: %v, got nil", domain.ErrKeyNotExists)
 		}
@@ -454,11 +452,8 @@ func TestRemoveItemFromSet(t *testing.T) {
 	db, _ := GetRedisDB(&config)
 	defer db.Client.FlushDB(context.Background())
 	t.Run("Test a key can be removed", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
+		repo := NewRedisRepo(&config, db)
 		db.Client.FlushDB(context.Background())
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
 
 		name := "TestRemoveItemFromSetOK"
 		repo.CreateSet(*domain.NewConfigSet(name))
@@ -475,7 +470,7 @@ func TestRemoveItemFromSet(t *testing.T) {
 		time.Sleep(1 * time.Second)
 
 		newItem.Value = "1000"
-		_, err = repo.RemoveItem(newItem, name)
+		_, err := repo.RemoveItem(newItem, name)
 		if err != nil {
 			t.Errorf("Expected item to be removed without errors, got: %v", err)
 		}
@@ -501,11 +496,8 @@ func TestRemoveItemFromSet(t *testing.T) {
 	})
 
 	t.Run("Test a non existing key can't be removed", func(t *testing.T) {
-		repo, err := NewRedisRepo(&config, db)
+		repo := NewRedisRepo(&config, db)
 		db.Client.FlushDB(context.Background())
-		if err != nil {
-			t.Errorf("Expected init without errors: %v", err)
-		}
 
 		name := "TestRemoveItemFromSetNotFound"
 		repo.CreateSet(*domain.NewConfigSet(name))
@@ -522,7 +514,7 @@ func TestRemoveItemFromSet(t *testing.T) {
 		now := datetime.UnixUTCNow()
 		newItem.Key = "TestRemoveItemFromSet_NotFound_Key"
 		newItem.Value = "101"
-		_, err = repo.RemoveItem(newItem, name)
+		_, err := repo.RemoveItem(newItem, name)
 		if err != domain.ErrKeyNotExists {
 			t.Errorf("Expected error: %v, got nil", domain.ErrKeyNotExists)
 		}
