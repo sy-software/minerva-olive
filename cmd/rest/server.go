@@ -15,9 +15,9 @@ import (
 	"github.com/rs/zerolog/log"
 	minervaLog "github.com/sy-software/minerva-go-utils/log"
 	"github.com/sy-software/minerva-olive/internal/core/domain"
-	"github.com/sy-software/minerva-olive/internal/core/repositories/redis"
 	"github.com/sy-software/minerva-olive/internal/core/service"
 	"github.com/sy-software/minerva-olive/internal/handlers"
+	"github.com/sy-software/minerva-olive/internal/repositories/redis"
 	"github.com/sy-software/minerva-olive/mocks"
 )
 
@@ -46,7 +46,7 @@ func main() {
 	zerolog.DurationFieldUnit = time.Nanosecond
 	zerolog.DurationFieldInteger = true
 	log.Info().Msg("Starting server")
-	config := domain.DefaultConfig()
+	config := domain.LoadConfig()
 	db, err := redis.GetRedisDB(&config)
 	if err != nil {
 		log.Error().Stack().Err(err).Msg("Can't initialize Redis DB")

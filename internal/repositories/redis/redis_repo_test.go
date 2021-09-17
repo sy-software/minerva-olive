@@ -542,3 +542,28 @@ func TestRemoveItemFromSet(t *testing.T) {
 		}
 	})
 }
+
+// Benchmarks
+
+func BenchmarkGetJSON(b *testing.B) {
+	config := domain.DefaultConfig()
+	config.Redis.DB = DB
+	db, err := GetRedisDB(&config)
+	defer db.Client.FlushDB(context.Background())
+	repo := NewRedisRepo(&config, db)
+
+	if err != nil {
+		b.Errorf("Expected init without errors: %v", err)
+	}
+
+	expected := []byte("{}")
+	err = repo.SaveJSON(expected, "TestSaveJSON", domain.InfiniteTTL)
+
+	if err != nil {
+		b.Errorf("Expected save without errors: %v", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		repo.GetJSON("TestSaveJSON", domain.AnyAge)
+	}
+}

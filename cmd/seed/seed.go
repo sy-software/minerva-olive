@@ -9,8 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 	minervaLog "github.com/sy-software/minerva-go-utils/log"
 	"github.com/sy-software/minerva-olive/internal/core/domain"
-	"github.com/sy-software/minerva-olive/internal/core/repositories/redis"
 	"github.com/sy-software/minerva-olive/internal/core/service"
+	"github.com/sy-software/minerva-olive/internal/repositories/redis"
 	"github.com/sy-software/minerva-olive/mocks"
 )
 

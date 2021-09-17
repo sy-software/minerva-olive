@@ -564,4 +564,22 @@ func TestDeleteConfigItem(t *testing.T) {
 	})
 }
 
-// remove item
+// Benchmarks
+
+func BenchmarkGetJSON(b *testing.B) {
+	router := gin.New()
+	name := "myConfig"
+	config := domain.DefaultConfig()
+	mockRepo := mocks.NewMockRepo()
+	cacheRepo := mocks.NewMockRepo()
+	mockSecret := mocks.MockSecrets{}
+	service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+	service.CreateSet(name)
+	handler := NewConfigRESTHandler(&config, service)
+	handler.CreateRoutes(router)
+
+	for i := 0; i < b.N; i++ {
+		performRequest(router, "GET", "/api/config/"+name, nil)
+	}
+}
