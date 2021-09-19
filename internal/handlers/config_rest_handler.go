@@ -1,15 +1,22 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"github.com/sy-software/minerva-olive/internal/core/domain"
 	"github.com/sy-software/minerva-olive/internal/core/ports"
+	"golang.org/x/sync/singleflight"
+)
+
+const (
+	singleflightOn string = "single_flight_on"
 )
 
 type renameBody struct {
@@ -17,14 +24,19 @@ type renameBody struct {
 }
 
 type ConfigRESTHandler struct {
-	config  *domain.Config
-	service ports.ConfigService
+	config      *domain.Config
+	service     ports.ConfigService
+	toggleFlags ports.ToggleRepo
 }
 
-func NewConfigRESTHandler(config *domain.Config, service ports.ConfigService) *ConfigRESTHandler {
+func NewConfigRESTHandler(
+	config *domain.Config,
+	toggleFlags ports.ToggleRepo,
+	service ports.ConfigService) *ConfigRESTHandler {
 	return &ConfigRESTHandler{
-		config:  config,
-		service: service,
+		config:      config,
+		service:     service,
+		toggleFlags: toggleFlags,
 	}
 }
 
@@ -34,17 +46,20 @@ func (handler *ConfigRESTHandler) CreateRoutes(router *gin.Engine) {
 	group := router.Group("api")
 	{
 		group.GET("/config/:name", func(c *gin.Context) {
-			data, err := handler.GetConfigJSON(c)
+			var data []byte
+			var err error
+			if handler.toggleFlags.GetFlag(singleflightOn, context.Background()).Status {
+				data, err = handler.getConfigJSONSingleFlight(c)
+			} else {
+				data, err = handler.GetConfigJSON(c)
+			}
 
 			if err != nil {
 				handleError(err, c)
 				return
 			}
 
-			// TODO: Remove this extra Unmarshal
-			var out gin.H
-			json.Unmarshal(data, &out)
-			c.JSON(http.StatusOK, gin.H{"data": out})
+			c.Data(http.StatusOK, "application/json; charset=utf-8", data)
 		})
 
 		group.POST("/configset/:name/item", func(c *gin.Context) {
@@ -142,6 +157,8 @@ func (handler *ConfigRESTHandler) GetConfigJSON(c *gin.Context) ([]byte, error) 
 		return nil, &domain.ErrInternalError
 	}
 
+	output = append([]byte(`{"data":`), output...)
+	output = append(output, []byte("}")...)
 	return output, nil
 }
 
@@ -325,6 +342,34 @@ func (handler *ConfigRESTHandler) DeleteConfigItem(c *gin.Context) (domain.Confi
 	return output, nil
 }
 
+// Single flight with channels and timeout
+var getConfigJSONReqGroup singleflight.Group
+
+func (handler *ConfigRESTHandler) getConfigJSONSingleFlight(c *gin.Context) ([]byte, error) {
+	fp := fullPath(c)
+	ch := getConfigJSONReqGroup.DoChan(fp, func() (interface{}, error) {
+		return handler.GetConfigJSON(c)
+	})
+
+	// Create our timeout
+	timeout := time.After(500 * time.Millisecond)
+
+	var result singleflight.Result
+	select {
+	case <-timeout: // Timeout elapsed, send a timeout message (504)
+		return nil, &domain.ErrTimeout
+	case result = <-ch: // Received result from channel
+	}
+
+	// singleflight.Result is the same three values as returned from Do(), but wrapped
+	// in a struct. Third return value tells if the output was shared to multiple callers
+	if result.Err != nil {
+		return nil, result.Err
+	}
+
+	return result.Val.([]byte), nil
+}
+
 // Utils
 
 func handleError(err error, c *gin.Context) {
@@ -336,4 +381,15 @@ func handleError(err error, c *gin.Context) {
 	}
 
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+}
+
+func fullPath(c *gin.Context) string {
+	fullPath := c.Request.URL.Path
+	raw := c.Request.URL.RawQuery
+
+	if raw != "" {
+		fullPath = fullPath + "?" + raw
+	}
+
+	return fullPath
 }

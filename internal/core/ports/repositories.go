@@ -1,6 +1,7 @@
 package ports
 
 import (
+	"context"
 	"errors"
 
 	"github.com/sy-software/minerva-olive/internal/core/domain"
@@ -36,4 +37,10 @@ type Secret interface {
 
 type Notifier interface {
 	SetUpdated(name string, set domain.ConfigSet) error
+}
+
+type ToggleRepo interface {
+	GetFlag(name string, ctx context.Context) domain.ToggleFlag
+	GetFlagWithDefaults(name string, defStatus bool, defData interface{}, ctx context.Context) domain.ToggleFlag
+	SetFlag(name string, status bool, data interface{}) error
 }

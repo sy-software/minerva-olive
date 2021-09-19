@@ -29,6 +29,16 @@ func performRequest(r http.Handler, method, path string, body *string) *httptest
 	return w
 }
 
+var toogleRepo = mocks.NewToggleFlagRepo(map[string]domain.ToggleFlag{
+	singleflightOn: {
+		Status: false,
+	},
+})
+
+func TestMain(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
+}
+
 func TestGetConfigJSON(t *testing.T) {
 	t.Run("Test getting a config json", func(t *testing.T) {
 		router := gin.New()
@@ -40,7 +50,7 @@ func TestGetConfigJSON(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		got := performRequest(router, "GET", "/api/config/"+name, nil)
@@ -74,7 +84,7 @@ func TestGetConfigJSON(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		got := performRequest(router, "GET", fmt.Sprintf("/api/config/%s?maxAge=%d", name, expectedMaxAge), nil)
@@ -102,7 +112,7 @@ func TestGetConfigJSON(t *testing.T) {
 		mockSecret := mocks.MockSecrets{}
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		got := performRequest(router, "GET", "/api/config/"+name, nil)
@@ -131,7 +141,7 @@ func TestGetConfig(t *testing.T) {
 		service.CreateSet(name)
 		set, _ := service.GetSet(name)
 		setJson, _ := json.Marshal(gin.H{"data": set})
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		got := performRequest(router, "GET", "/api/configset/"+name, nil)
@@ -155,7 +165,7 @@ func TestGetConfig(t *testing.T) {
 		mockSecret := mocks.MockSecrets{}
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		got := performRequest(router, "GET", "/api/configset/"+name, nil)
@@ -181,7 +191,7 @@ func TestCreateConfig(t *testing.T) {
 		mockSecret := mocks.MockSecrets{}
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		got := performRequest(router, "POST", "/api/configset/"+name, nil)
@@ -213,7 +223,7 @@ func TestCreateConfig(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		got := performRequest(router, "POST", "/api/configset/"+name, nil)
@@ -227,7 +237,6 @@ func TestCreateConfig(t *testing.T) {
 			t.Errorf("Expected response to contain: %s got: %v", expected, got.Body.String())
 		}
 	})
-
 }
 
 func TestRenameConfig(t *testing.T) {
@@ -241,7 +250,7 @@ func TestRenameConfig(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		newName := "newName"
@@ -274,7 +283,7 @@ func TestRenameConfig(t *testing.T) {
 		mockSecret := mocks.MockSecrets{}
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		newName := "newName"
@@ -303,7 +312,7 @@ func TestDeleteConfig(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		got := performRequest(router, "DELETE", "/api/configset/"+name, nil)
@@ -327,7 +336,7 @@ func TestDeleteConfig(t *testing.T) {
 		mockSecret := mocks.MockSecrets{}
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		got := performRequest(router, "DELETE", "/api/configset/"+name, nil)
@@ -348,7 +357,7 @@ func TestAddConfigItem(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
@@ -388,7 +397,7 @@ func TestAddConfigItem(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		key := domain.NewConfigItem("myKey", 100, domain.Plain)
@@ -408,8 +417,6 @@ func TestAddConfigItem(t *testing.T) {
 	})
 }
 
-// update item
-
 func TestUpdateConfigItem(t *testing.T) {
 	t.Run("Test update a config item", func(t *testing.T) {
 		router := gin.New()
@@ -421,7 +428,7 @@ func TestUpdateConfigItem(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
@@ -466,7 +473,7 @@ func TestUpdateConfigItem(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
@@ -511,7 +518,7 @@ func TestDeleteConfigItem(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
@@ -549,7 +556,7 @@ func TestDeleteConfigItem(t *testing.T) {
 		service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 		service.CreateSet(name)
-		handler := NewConfigRESTHandler(&config, service)
+		handler := NewConfigRESTHandler(&config, toogleRepo, service)
 		handler.CreateRoutes(router)
 
 		key := domain.NewConfigItem("myKey", float64(100), domain.Plain)
@@ -566,7 +573,7 @@ func TestDeleteConfigItem(t *testing.T) {
 
 // Benchmarks
 
-func BenchmarkGetJSON(b *testing.B) {
+func BenchmarkGetJSONWithoutSingleflight(b *testing.B) {
 	router := gin.New()
 	name := "myConfig"
 	config := domain.DefaultConfig()
@@ -576,7 +583,30 @@ func BenchmarkGetJSON(b *testing.B) {
 	service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
 
 	service.CreateSet(name)
-	handler := NewConfigRESTHandler(&config, service)
+	handler := NewConfigRESTHandler(&config, toogleRepo, service)
+	handler.CreateRoutes(router)
+
+	for i := 0; i < b.N; i++ {
+		performRequest(router, "GET", "/api/config/"+name, nil)
+	}
+}
+
+func BenchmarkGetJSONWithSingleflight(b *testing.B) {
+	router := gin.New()
+	name := "myConfig"
+	config := domain.DefaultConfig()
+	mockRepo := mocks.NewMockRepo()
+	cacheRepo := mocks.NewMockRepo()
+	mockSecret := mocks.MockSecrets{}
+	service := service.NewConfigService(&config, mockRepo, cacheRepo, &mockSecret)
+
+	service.CreateSet(name)
+	toogleRepo := mocks.NewToggleFlagRepo(map[string]domain.ToggleFlag{
+		singleflightOn: {
+			Status: true,
+		},
+	})
+	handler := NewConfigRESTHandler(&config, toogleRepo, service)
 	handler.CreateRoutes(router)
 
 	for i := 0; i < b.N; i++ {

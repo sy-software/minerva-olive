@@ -18,17 +18,24 @@ func (e *RestError) Error() string {
 }
 
 const (
-	MissingParams ErrorCode = 64000
-	NotFound      ErrorCode = 64001
-	Internal      ErrorCode = 64002
-	InvalidParams ErrorCode = 64003
-	BadRequest    ErrorCode = 64003
+	MissingParams ErrorCode = iota + 64000
+	NotFound
+	Internal
+	InvalidParams
+	BadRequest
+	Timeout
 )
 
 var ErrInternalError = RestError{
 	Code:       Internal,
 	Message:    "internal server error",
 	HTTPStatus: http.StatusInternalServerError,
+}
+
+var ErrTimeout = RestError{
+	Code:       Timeout,
+	Message:    "operation timeout",
+	HTTPStatus: http.StatusRequestTimeout,
 }
 
 func ErrMissingParam(params ...string) *RestError {

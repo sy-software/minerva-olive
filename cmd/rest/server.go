@@ -53,13 +53,15 @@ func main() {
 		os.Exit(1)
 	}
 	repo := redis.NewRedisRepo(&config, db)
+	// TODO: Use a separated DB
+	toggleRepo := redis.NewRedisToggleRepo(&config, db)
 	if err != nil {
 		log.Error().Stack().Err(err).Msg("Can't initialize Redis DB")
 		os.Exit(1)
 	}
 	configService := service.NewConfigService(&config, repo, repo, &mocks.MockSecrets{})
 
-	handler := handlers.NewConfigRESTHandler(&config, configService)
+	handler := handlers.NewConfigRESTHandler(&config, toggleRepo, configService)
 
 	router := gin.New()
 	router.Use()
