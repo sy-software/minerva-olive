@@ -24,8 +24,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Test
-      run: go test -race -covermode=atomic -coverprofile=coverage.out -shuffle=on
+      run: go test ./... -race -covermode=atomic -coverprofile=coverage.out -shuffle=on
     - name: Upload to codecov.io
+      if: ${{ success() && matrix.os=='macos-latest' }}
       run: bash <(curl -s https://codecov.io/bash)
     - name: Trigger next workflow
     # Since macOS is last OS in the matrix we only build
