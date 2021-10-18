@@ -22,10 +22,10 @@ FROM gcr.io/distroless/base-debian10
 
 WORKDIR /
 
-COPY --from=build /app/bin/minerva-spear-auth /minerva-spear-auth
+COPY --from=build /app/bin/minerva-olive /minerva-olive
 
 EXPOSE 80
 
 USER nonroot:nonroot
 
-ENTRYPOINT ["/minerva-spear-auth"]
+ENTRYPOINT ["/minerva-olive"]
