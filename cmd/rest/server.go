@@ -17,8 +17,8 @@ import (
 	"github.com/sy-software/minerva-olive/internal/core/domain"
 	"github.com/sy-software/minerva-olive/internal/core/service"
 	"github.com/sy-software/minerva-olive/internal/handlers"
+	"github.com/sy-software/minerva-olive/internal/repositories/awssm"
 	"github.com/sy-software/minerva-olive/internal/repositories/redis"
-	"github.com/sy-software/minerva-olive/mocks"
 )
 
 const defaultConfigFile = "./config.json"
@@ -46,6 +46,7 @@ func main() {
 	zerolog.DurationFieldUnit = time.Nanosecond
 	zerolog.DurationFieldInteger = true
 	log.Info().Msg("Starting server")
+
 	config := domain.LoadConfig()
 	db, err := redis.GetRedisDB(&config)
 	if err != nil {
@@ -59,7 +60,8 @@ func main() {
 		log.Error().Stack().Err(err).Msg("Can't initialize Redis DB")
 		os.Exit(1)
 	}
-	configService := service.NewConfigService(&config, repo, repo, &mocks.MockSecrets{})
+	secretMngr := awssm.NewAWSSM()
+	configService := service.NewConfigService(&config, repo, repo, secretMngr)
 
 	handler := handlers.NewConfigRESTHandler(&config, toggleRepo, configService)
 

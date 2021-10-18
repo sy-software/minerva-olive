@@ -1,0 +1,29 @@
+{
+    // Redis connection configurations
+    "redisConfig": {
+        // Database host, default: 127.0.0.1
+        "host": "127.0.0.1",
+        // Database port, default: 6379
+        "port": "6379",
+        // Database selected, default: 1
+        "db": 1,
+        // Database username. Omit if the DB have no authentication
+        "username": "",
+        // Database password. Omit if the DB have no authentication
+        "password": "",
+        // Maximum number of retries before giving up, default: 3
+        "maxRetries": 3,
+        // Database connection timeout, default: 10 seconds
+        "connectionTimeout": 10,
+        // Database read timeout, default: 1s
+        "readTimeout": 1,
+        // Max number of socket connections, default: 10
+        "poolSize": 10
+    },
+    // TTL for stored cache, default (-1) infinite
+    "cacheTTL": -1,
+    // Server bind IP default 0.0.0.0
+    "host": "0.0.0.0,
+    // Server bind port default 8080
+    "port": 8080
+}
