@@ -23,7 +23,7 @@
     // TTL for stored cache, default (-1) infinite
     "cacheTTL": -1,
     // Server bind IP default 0.0.0.0
-    "host": "0.0.0.0,
+    "host": "0.0.0.0",
     // Server bind port default 8080
     "port": 8080
 }
