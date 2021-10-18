@@ -11,7 +11,7 @@ but can be used by any other platform.
 
 To run this project you'll need to provide a config file in json format.
 
-```json
+```jsonc
 {
     // Redis connection configurations
     "redisConfig": {
