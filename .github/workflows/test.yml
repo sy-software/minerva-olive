@@ -27,6 +27,7 @@ jobs:
       run: go test -race -covermode=atomic -coverprofile=coverage.out -shuffle=on
     - name: Upload to codecov.io
       run: bash <(curl -s https://codecov.io/bash)
+    - name: Trigger next workflow
     # Since macOS is last OS in the matrix we only build
     # the docker image after all test passed
       if: ${{ success() && matrix.os=='macos-latest' }}
