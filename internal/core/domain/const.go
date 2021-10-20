@@ -6,6 +6,7 @@ const (
 	AnyAge      = -1
 )
 
+// Default name of the request id for logging
 const (
 	RequestIdKey string = "X-REQUEST-ID"
 )

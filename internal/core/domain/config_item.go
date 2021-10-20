@@ -7,25 +7,38 @@ import (
 	"github.com/sy-software/minerva-go-utils/datetime"
 )
 
+// ConfigType represents the posible ways to store config values
 type ConfigType string
 
+// Available ConfigTypes
 const (
+	// A config value stored in the secret manager
 	Secret ConfigType = "secret"
-	Plain  ConfigType = "plain"
+	// A config value stored as plain value
+	Plain ConfigType = "plain"
+	// A config value containing a nested config set
 	Nested ConfigType = "nested"
 )
 
+// Possible errors during config manipulation
 var (
-	ErrDuplicatedKey         = errors.New("duplicated config item key")
-	ErrKeyNotExists          = errors.New("config item key does not exists")
+	// The config set already contains the given config key
+	ErrDuplicatedKey = errors.New("duplicated config item key")
+	ErrKeyNotExists  = errors.New("config item key does not exists")
+	// A config item of type "nested" does not contain a string as value
 	ErrInvalidNestedKeyValue = errors.New("invalid key value for nested config")
-	ErrSecretKeyValue        = errors.New("invalid key value for secret")
+	// A config item of type "secret" does not contain a string as value
+	ErrSecretKeyValue = errors.New("invalid key value for secret")
 )
 
+// ConfigItem represents a single config value
 type ConfigItem struct {
-	Key   string      `json:"key"`
+	// The key to access this value inside a set
+	Key string `json:"key"`
+	// The stored value, for types "nested" and "secret" this should always be a string
 	Value interface{} `json:"value"`
-	Type  ConfigType  `json:"type"`
+	// The type of config stored in this item
+	Type ConfigType `json:"type"`
 }
 
 func NewConfigItem(key string, value interface{}, cfgType ConfigType) *ConfigItem {
@@ -38,13 +51,19 @@ func NewConfigItem(key string, value interface{}, cfgType ConfigType) *ConfigIte
 
 type ConfigItemMap map[string]ConfigItem
 
+// ConfigSet is a group of config values
 type ConfigSet struct {
-	Name       string        `json:"name"`
-	CreateDate time.Time     `json:"createDate"`
-	UpdateDate time.Time     `json:"updateDate"`
-	Items      ConfigItemMap `json:"items"`
+	// The name to address this set
+	Name string `json:"name"`
+	// When was this set created
+	CreateDate time.Time `json:"createDate"`
+	// When was this set last updated
+	UpdateDate time.Time `json:"updateDate"`
+	// The items contained in this set
+	Items ConfigItemMap `json:"items"`
 }
 
+// NewConfigSet creates a new config set with the given items
 func NewConfigSet(name string, items ...ConfigItem) *ConfigSet {
 	mapItems := ConfigItemMap{}
 
@@ -60,6 +79,7 @@ func NewConfigSet(name string, items ...ConfigItem) *ConfigSet {
 	}
 }
 
+// Add saves the given item into this set
 func (set *ConfigSet) Add(item ConfigItem) error {
 	_, exists := set.Items[item.Key]
 
@@ -71,6 +91,8 @@ func (set *ConfigSet) Add(item ConfigItem) error {
 	return nil
 }
 
+// Get finds a config item with the given key
+// returns ErrKeyNotExists if the key is not present in this set
 func (set *ConfigSet) Get(key string) (ConfigItem, error) {
 	val, ok := set.Items[key]
 
@@ -81,6 +103,8 @@ func (set *ConfigSet) Get(key string) (ConfigItem, error) {
 	return val, nil
 }
 
+// Update replaces the config item with the same key as the one provided
+// returns ErrKeyNotExists if the key is not present in this set
 func (set *ConfigSet) Update(item ConfigItem) (ConfigItem, error) {
 	_, ok := set.Items[item.Key]
 
@@ -92,6 +116,8 @@ func (set *ConfigSet) Update(item ConfigItem) (ConfigItem, error) {
 	return item, nil
 }
 
+// Delete removes the config item with the given key
+// returns ErrKeyNotExists if the key is not present in this set
 func (set *ConfigSet) Delete(key string) (ConfigItem, error) {
 	val, ok := set.Items[key]
 

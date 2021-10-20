@@ -172,7 +172,7 @@ func (handler *ConfigRESTHandler) CreateConfigSet(c *gin.Context) (domain.Config
 	output, err := handler.service.CreateSet(name)
 	if err != nil {
 		if err == ports.ErrDuplicatedConfig {
-			return domain.ConfigSet{}, domain.ErrBadRequest(err.Error(), domain.BadRequest)
+			return domain.ConfigSet{}, domain.ErrBadRequest(err.Error())
 		}
 
 		log.Error().Stack().Err(err).Msg("GetConfigSet error")
@@ -191,16 +191,16 @@ func (handler *ConfigRESTHandler) RenameConfigSet(c *gin.Context) (domain.Config
 
 	jsonData, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body", domain.BadRequest)
+		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body")
 	}
 	var body renameBody
 	err = json.Unmarshal(jsonData, &body)
 	if err != nil {
-		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body", domain.BadRequest)
+		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body")
 	}
 
 	if body.Name == "" || body.Name == name {
-		return domain.ConfigSet{}, domain.ErrBadRequest("invalid new name", domain.BadRequest)
+		return domain.ConfigSet{}, domain.ErrBadRequest("invalid new name")
 	}
 
 	output, err := handler.service.RenameSet(name, body.Name)
@@ -265,18 +265,18 @@ func (handler *ConfigRESTHandler) AddConfigItem(c *gin.Context) (domain.ConfigSe
 
 	jsonData, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body", domain.BadRequest)
+		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body")
 	}
 	var body domain.ConfigItem
 	err = json.Unmarshal(jsonData, &body)
 	if err != nil {
-		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body", domain.BadRequest)
+		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body")
 	}
 
 	output, err := handler.service.AddItem(body, name)
 	if err != nil {
 		if err == domain.ErrDuplicatedKey {
-			return domain.ConfigSet{}, domain.ErrBadRequest(err.Error(), domain.BadRequest)
+			return domain.ConfigSet{}, domain.ErrBadRequest(err.Error())
 		}
 
 		log.Error().Stack().Err(err).Msg("GetConfigSet error")
@@ -295,12 +295,12 @@ func (handler *ConfigRESTHandler) UpdateConfigItem(c *gin.Context) (domain.Confi
 
 	jsonData, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body", domain.BadRequest)
+		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body")
 	}
 	var body domain.ConfigItem
 	err = json.Unmarshal(jsonData, &body)
 	if err != nil {
-		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body", domain.BadRequest)
+		return domain.ConfigSet{}, domain.ErrBadRequest("invalid body")
 	}
 
 	output, err := handler.service.UpdateItem(body, name)
