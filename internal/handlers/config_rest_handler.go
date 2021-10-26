@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
+// Feature flags used in ths handler
 const (
 	singleflightOn string = "single_flight_on"
 )
@@ -23,6 +24,7 @@ type renameBody struct {
 	Name string `json:"name"`
 }
 
+// ConfigRESTHandler provides a REST API handler for ports.ConfigService
 type ConfigRESTHandler struct {
 	config      *domain.Config
 	service     ports.ConfigService
@@ -40,6 +42,7 @@ func NewConfigRESTHandler(
 	}
 }
 
+// CreateRoutes adds the API routes to the gin router
 func (handler *ConfigRESTHandler) CreateRoutes(router *gin.Engine) {
 
 	// handler.config.APIPrefix

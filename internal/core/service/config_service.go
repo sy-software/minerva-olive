@@ -8,6 +8,7 @@ import (
 	"github.com/sy-software/minerva-olive/internal/core/ports"
 )
 
+// ports.ConfigService implementation
 type ConfigService struct {
 	repo          ports.Repo
 	cache         ports.CacheRepo
