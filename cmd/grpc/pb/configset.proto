@@ -1,0 +1,25 @@
+syntax = "proto3";
+option go_package = "github.com/sy-software/minerva-olive/cmd/grpc/pb";
+import "google/protobuf/any.proto";
+
+
+message ConfigItem {
+    string key = 1;
+    google.protobuf.Any value = 2;
+    string type = 3;
+}
+
+message ConfigSet {
+    string name = 1;
+    int64 createDate = 2;
+    int64 updateDate = 3;
+    map<string, ConfigItem> items = 4;
+}
+
+message NewConfigSet {
+    string name = 1;
+}
+
+service ConfigSetGRPC {
+    rpc CreateConfigSet(NewConfigSet) returns (ConfigSet) {}
+}
