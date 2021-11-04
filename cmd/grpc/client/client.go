@@ -12,7 +12,7 @@ import (
 func main() {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
-	serverAddr := "localhost:8080"
+	serverAddr := "localhost:8081"
 	conn, err := grpc.Dial(serverAddr, opts...)
 	if err != nil {
 		log.Fatal(err)
@@ -20,7 +20,7 @@ func main() {
 	defer conn.Close()
 
 	client := pb.NewConfigSetGRPCClient(conn)
-	set, err := client.CreateConfigSet(context.Background(), &pb.NewConfigSet{Name: "helloworld"})
+	set, err := client.CreateConfigSet(context.Background(), &pb.NewConfigSet{Name: "helloworld2"})
 
 	fmt.Printf("Set: %+v\n", set)
 	fmt.Printf("Error: %q", err)
